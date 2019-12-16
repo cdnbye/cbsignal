@@ -1,22 +1,16 @@
 ### The signal server of [hlsjs-p2p-engine](https://github.com/cdnbye/hlsjs-p2p-engine)
 
-#### install dependency
+### build
 ```bash
-git clone https://github.com/cdnbye/gosignaler.git
-
-go get github.com/gorilla/websocket
+git clone https://github.com/cdnbye/cbsignal.git
+cd cbsignal
+make
 ```
 
-#### compile
-```bash
-cd gosignaler && make
-```
-
-#### deploy
-Upload binary file to server, create `cert` directory with `crt.pem` and `crt.key`, then start service:
+### deploy
+Upload binary file to server, create `cert` directory with `signaler.pem` and `signaler.key`, then start service:
 ```bash
 chmod +x admin.sh
-
 ./admin.sh start
 ```
 
@@ -35,23 +29,17 @@ var hls = new Hls(hlsjsConfig);
 ```
 
 ### go语言版的 CDNBye 信令服务器，可用于Web、安卓、iOS SDK等所有CDNBye产品
-#### 安装依赖
-```bash
-git clone https://github.com/cdnbye/gosignaler.git
-
-go get github.com/gorilla/websocket
-```
-
 #### 编译二进制文件
 ```bash
-cd gosignaler && make
+git clone https://github.com/cdnbye/cbsignal.git
+cd cbsignal
+make
 ```
 
 #### 部署
-将编译生成的二进制文件上传至服务器，并在同级目录创建`cert`文件夹，将证书和秘钥文件分别改名为`crt.pem`和`crt.key`放入cert，之后启动服务：
+将编译生成的二进制文件上传至服务器，并在同级目录创建`cert`文件夹，将证书和秘钥文件分别改名为`signaler.pem`和`signaler.key`放入cert，之后启动服务：
 ```bash
 chmod +x admin.sh
-
 ./admin.sh start
 ```
 
