@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"github.com/lexkong/log"
 	"sync"
+	"sync/atomic"
 )
 
 
@@ -29,7 +30,7 @@ type Hub struct {
 	unregister chan *Client
 
 	//count of client
-	ClientNum uint16
+	ClientNum int64
 
 }
 
@@ -53,10 +54,9 @@ func (this *Hub) sendJsonToClient(peerId string, value interface{})  {
 		//log.Printf("sendJsonToClient error")
 		return
 	}
-	// TODO
 	defer func() {                            // 必须要先声明defer，否则不能捕获到panic异常
 		if err := recover(); err != nil {
-			log.Infof(err.(string))                  // 这里的err其实就是panic传入的内容
+			log.Warnf(err.(string))                  // 这里的err其实就是panic传入的内容
 		}
 	}()
 	if err := client.(*Client).sendMessage(b); err != nil {
@@ -82,7 +82,7 @@ func (this *Hub) doRegister(client *Client) {
 	//	logrus.Debugf("[Hub.doRegister] %s", client.id)
 	if client.PeerId != "" {
 		this.clients.Store(client.PeerId, client)
-		this.ClientNum ++
+		atomic.AddInt64(&this.ClientNum, 1)
 	}
 }
 
@@ -99,7 +99,7 @@ func (this *Hub) doUnregister(client *Client) {
 		//delRecordCh <- client.id
 		this.clients.Delete(client.PeerId)
 		close(client.send)
-		this.ClientNum --
+		atomic.AddInt64(&this.ClientNum, -1)
 	}
 
 }
