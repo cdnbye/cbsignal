@@ -92,14 +92,13 @@ func (this *Hub) doUnregister(client *Client) {
 	if client.PeerId == "" {
 		return
 	}
-
+	atomic.AddInt64(&this.ClientNum, -1)
 	_, ok := this.clients.Load(client.PeerId)
-
 	if ok {
 		//delRecordCh <- client.id
 		this.clients.Delete(client.PeerId)
 		close(client.send)
-		atomic.AddInt64(&this.ClientNum, -1)
+
 	}
 
 }
