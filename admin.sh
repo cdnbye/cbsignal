@@ -1,6 +1,10 @@
 #!/bin/bash
-
-SERVER="cbsignal"
+FILE_NAME="cbsignal"
+if [ -n "$2" ]; then
+  SERVER=$2
+else
+  SERVER=$FILE_NAME
+fi
 SERVICE="$SERVER.service"
 PREFIX="/lib/systemd/system"
 BASE_DIR=$PWD
@@ -38,9 +42,12 @@ WantedBy=multi-user.target" > ./$SERVICE
 function deploy()
 {
   ulimit -n 1000000
+  if [ "$SERVER" != "$FILE_NAME" ]; then
+    sudo cp $FILE_NAME $SERVER
+  fi
   echo "Generate Service File"
 	generateServiceFile
-	sudo cp $SERVICE $PREFIX
+	sudo mv $SERVICE $PREFIX
 	sudo systemctl daemon-reload
 	sudo systemctl enable $SERVICE
 }
