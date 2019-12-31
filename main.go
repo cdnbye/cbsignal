@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync/atomic"
 )
 
 var (
@@ -88,7 +89,7 @@ func main() {
 	http.HandleFunc("/count", func(w http.ResponseWriter, r *http.Request) {
 		//fmt.Printf("URL: %s\n", r.URL.String())
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write([]byte(fmt.Sprintf("%d", hub.ClientNum)))
+		w.Write([]byte(fmt.Sprintf("%d", atomic.LoadInt64(&hub.ClientNum))))
 
 	})
 

@@ -1,14 +1,22 @@
 #!/bin/bash
 FILE_NAME="cbsignal"
+
 if [ -n "$2" ]; then
   SERVER=$2
 else
   SERVER=$FILE_NAME
 fi
+
 SERVICE="$SERVER.service"
 PREFIX="/lib/systemd/system"
 BASE_DIR=$PWD
 INTERVAL=2
+
+EXEC_COMMAND="$BASE_DIR/$SERVER"
+if [ -n "$3" ]; then
+  EXEC_COMMAND="$EXEC_COMMAND -c $3"
+fi
+echo "$EXEC_COMMAND"
 
 # 命令行参数，需要手动指定
 ARGS=""
@@ -27,7 +35,7 @@ LimitNPROC=1000000
 
 WorkingDirectory=$BASE_DIR
 
-ExecStart=$BASE_DIR/$SERVER
+ExecStart=$EXEC_COMMAND
 
 StandardOutput=null
 StandardError=null
@@ -86,16 +94,15 @@ function stop()
 {
 	if [ "`pgrep $SERVER`" != "" ];then
 		sudo systemctl stop $SERVICE
+		echo "sleeping..." &&  sleep $INTERVAL
+		if [ "`pgrep $SERVER`" != "" ];then
+		  echo "$SERVER stop failed"
+		  exit 1
+	  fi
+	  echo "$SERVER stop succeed"
+	else
+	  echo "$SERVER is not running"
 	fi
-
-	echo "sleeping..." &&  sleep $INTERVAL
-
-	if [ "`pgrep $SERVER`" != "" ];then
-		echo "$SERVER stop failed"
-		exit 1
-	fi
-
-	echo "$SERVER stop succeed"
 }
 
 function restart()
