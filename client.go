@@ -165,7 +165,7 @@ func (c *Client) writePump() {
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request, id string) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Warnf(err.Error())
+		log.Infof(err.Error())
 		return
 	}
 	client := &Client{
