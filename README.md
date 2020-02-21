@@ -42,6 +42,7 @@ make
 ```bash
 ulimit -n 1000000
 chmod +x admin.sh
+echo -17 > /proc/$(pidof cbsignal)/oom_adj     # 防止进程被OOM killer杀死
 ./admin.sh start
 ```
 
@@ -58,6 +59,9 @@ var hlsjsConfig = {
 var hls = new Hls(hlsjsConfig);
 // Use `hls` just like the usual hls.js ...
 ```
+
+### 配置建议
+信令对内存和带宽要求比较高，大概每16GB内存可以容纳20万并发连接数。
 
 
 

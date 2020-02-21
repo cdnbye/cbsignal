@@ -1,6 +1,6 @@
 
 log:
-  writers: file              # 输出位置，有两个可选项 —— file 和 stdout。选择 file 会将日志记录到 logger_file 指定的日志文件中，选择 stdout 会将日志输出到标准输出，当然也可以两者同时选择
+  writers: file                # 输出位置，有两个可选项 —— file 和 stdout。选择 file 会将日志记录到 logger_file 指定的日志文件中，选择 stdout 会将日志输出到标准输出，当然也可以两者同时选择
   logger_level: WARN           # 日志级别，DEBUG、INFO、WARN、ERROR、FATAL
   logger_dir: log/signal.log   # 日志文件目录
   log_format_text: true        # 日志的输出格式，JSON 或者 plaintext，true 会输出成非 JSON 格式，false 会输出成 JSON 格式
@@ -14,5 +14,7 @@ tls:
   port: :443                # https的端口
   cert: cert/signaler.pem
   key: cert/signaler.key
+
+compression: false              # 是否开启websocket压缩
 
 
