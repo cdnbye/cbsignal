@@ -9,9 +9,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/lexkong/log"
+	"github.com/spf13/viper"
 	"net/http"
 	"time"
-	"github.com/lexkong/log"
 )
 
 const (
@@ -39,6 +40,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {                           //跨域
 		return true
 	},
+	EnableCompression: viper.GetBool("compression"),
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -165,9 +167,18 @@ func (c *Client) writePump() {
 func serveWs(hub *Hub, w http.ResponseWriter, r *http.Request, id string) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Warnf(err.Error())
+		log.Infof(err.Error())
 		return
 	}
+
+	// 判断id是否重复
+	//_, ok := hub.clients.Load(id)
+	//if ok {
+	//	log.Errorf(errors.New("peer id duplicated"), "id: %s", id)
+	//	conn.Close()
+	//	return
+	//}
+
 	client := &Client{
 		hub: hub,
 		conn: conn,
