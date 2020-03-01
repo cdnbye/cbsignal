@@ -15,6 +15,5 @@ tls:
   cert: cert/signaler.pem
   key: cert/signaler.key
 
-compression: true              # 是否开启websocket压缩
 
 

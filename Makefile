@@ -13,7 +13,7 @@ BINARY_NAME_SIGNALER=cbsignal
 
 main:
 	@echo "------build signaler--------"
-	$(GOENV) $(GOBUILD) -o $(BINARY_NAME_SIGNALER) -v main.go hub.go handler.go client.go
+	$(GOENV) $(GOBUILD) -o $(BINARY_NAME_SIGNALER) -v main.go
 test:
 	$(GOTEST) -v ./...
 clean:
