@@ -86,7 +86,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() {
 			// 节点离开
-			log.Infof("节点离开1 ")
+			log.Infof("peer leave")
 			hub.DoUnregister(c)
 			conn.Close()
 		}()
@@ -156,7 +156,7 @@ func main() {
 	//	}
 	//}()
 
-	hub.Init()
+	hub.Init(viper.GetBool("compression.enable"), viper.GetInt("compression.level"), viper.GetInt("compression.activationRatio"))
 
 	http.HandleFunc("/ws", wsHandler)
 	http.HandleFunc("/wss", wsHandler)
@@ -170,7 +170,7 @@ func main() {
 
 	if  SignalPortTLS != "" && Exists(signalCert) && Exists(signalKey) {
 		go func() {
-			log.Infof("Start to listening the incoming requests on https address: %s\n", SignalPortTLS)
+			log.Warnf("Start to listening the incoming requests on https address: %s\n", SignalPortTLS)
 			err := http.ListenAndServeTLS(SignalPortTLS, signalCert, signalKey, nil)
 			if err != nil {
 				log.Fatal("ListenAndServe: ", err)
@@ -180,7 +180,7 @@ func main() {
 
 	if SignalPort != "" {
 		go func() {
-			log.Infof("Start to listening the incoming requests on http address: %s\n", SignalPort)
+			log.Warnf("Start to listening the incoming requests on http address: %s\n", SignalPort)
 			err := http.ListenAndServe(SignalPort, nil)
 			if err != nil {
 				log.Fatal("ListenAndServe: ", err)

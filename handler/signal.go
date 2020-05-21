@@ -20,7 +20,8 @@ func (s *SignalHandler)Handle() {
 			FromPeerId: s.Cli.PeerId,
 			Data: s.Msg.Data,
 		}
-		hub.SendJsonToClient(s.Msg.To_peer_id, resp)
+
+		hub.SendJsonToClient(s.Msg.To_peer_id, resp, true)
 	} else {
 		//log.Println("Peer not found")
 		resp := SignalResp{
@@ -30,7 +31,7 @@ func (s *SignalHandler)Handle() {
 		// 发送一次后，同一peerId下次不再发送，节省带宽
 		if !s.Cli.InvalidPeers[s.Msg.To_peer_id] {
 			s.Cli.InvalidPeers[s.Msg.To_peer_id] = true
-			hub.SendJsonToClient(s.Cli.PeerId, resp)
+			hub.SendJsonToClient(s.Cli.PeerId, resp, true)
 		}
 	}
 }

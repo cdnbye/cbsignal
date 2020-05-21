@@ -25,6 +25,8 @@ type Client struct {
 	PeerId          string              //唯一标识
 
 	InvalidPeers    map[string]bool    // 已经无效的peerId
+
+	CompressSupported bool             // 是否支持压缩
 }
 
 func (c *Client)SendMessage(msg []byte) error {
@@ -32,6 +34,16 @@ func (c *Client)SendMessage(msg []byte) error {
 	if err != nil {
 		// handle error
 		log.Warnf("WriteServerMessage " + err.Error())
+		return err
+	}
+	return nil
+}
+
+func (c *Client)SendBinaryData(data []byte) error {
+	err := wsutil.WriteServerMessage(c.Conn, ws.OpBinary, data)
+	if err != nil {
+		// handle error
+		log.Warnf("SendBinaryData " + err.Error())
 		return err
 	}
 	return nil

@@ -1,7 +1,9 @@
 package hub
 
 import (
+	"bytes"
 	"cbsignal/client"
+	"compress/zlib"
 	"encoding/json"
 	"github.com/lexkong/log"
 	"sync"
@@ -15,11 +17,16 @@ type Hub struct {
 
 	ClientNum int64            //count of client
 
+	CompressEnable bool
+	CompressLevel int
+	CompressRatio int
 }
 
-func Init() {
+func Init(compressEnable bool, compressLevel int, compressRatio int) {
 	h = &Hub{
-
+		CompressEnable: compressEnable,
+		CompressLevel: compressLevel,
+		CompressRatio: compressRatio,
 	}
 }
 
@@ -50,7 +57,7 @@ func DoUnregister(client *client.Client) {
 }
 
 // send json object to a client with peerId
-func SendJsonToClient(peerId string, value interface{})  {
+func SendJsonToClient(peerId string, value interface{}, allowCompress bool)  {
 	b, err := json.Marshal(value)
 	if err != nil {
 		log.Error("json.Marshal", err)
@@ -61,13 +68,42 @@ func SendJsonToClient(peerId string, value interface{})  {
 		//log.Printf("sendJsonToClient error")
 		return
 	}
+	peer := cli.(*client.Client)
 	defer func() {                            // 必须要先声明defer，否则不能捕获到panic异常
 		if err := recover(); err != nil {
 			log.Warnf(err.(string))                  // 这里的err其实就是panic传入的内容
 		}
 	}()
-	if err := cli.(*client.Client).SendMessage(b); err != nil {
-		log.Warnf("sendMessage", err)
+
+	if h.CompressEnable && allowCompress && peer.CompressSupported {
+		var buf bytes.Buffer
+		compressor, err := zlib.NewWriterLevel(&buf, h.CompressLevel)
+		if err != nil {
+			log.Warnf("compress failed %s", err)
+			return
+		}
+		if _, err := compressor.Write(b); err != nil {
+			log.Warnf("compress Write failed %s", err)
+			return
+		}
+		if err :=compressor.Close(); err != nil {
+			log.Warnf("compress Close failed %s", err)
+			return
+		}
+
+		log.Infof("before compress len %d", len(b))
+		log.Infof("after compress len %d", len(buf.Bytes()))
+
+		if err := peer.SendBinaryData(buf.Bytes()); err != nil {
+			log.Warnf("SendBinaryData", err)
+		}
+
+
+	} else {
+
+		if err := peer.SendMessage(b); err != nil {
+			log.Warnf("sendMessage", err)
+		}
 	}
 }
 

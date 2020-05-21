@@ -15,5 +15,11 @@ tls:
   cert: cert/signaler.pem
   key: cert/signaler.key
 
+# 开启压缩后可以减少信令服务器出带宽   turned on to reduce output bandwidth of the signaling server
+compression:
+  enable: true
+  level: 2                     # -1: DefaultCompression   1: BestSpeed  <---> 9: BestCompression
+  activationRatio: 100         # 0 <---> 100   (%)
+
 
 
