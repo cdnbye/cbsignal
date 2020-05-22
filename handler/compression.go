@@ -17,7 +17,7 @@ type CompressHandler struct {
 func (s *CompressHandler)Handle() {
 	h := hub.GetInstance()
 
-	if h.CompressEnable && h.CompressRatio > 0 {
+	if h.CompressEnable && s.Msg.Supported && h.CompressRatio > 0 {
 		x := 100
 		if h.CompressRatio != 100 {
 			rand.Seed(time.Now().UnixNano())

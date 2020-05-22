@@ -13,7 +13,7 @@ type SignalMsg struct {
 	Action     string          `json:"action"`
 	To_peer_id string          `json:"to_peer_id"`
 	Data  interface{}          `json:"data"`
-	Supported bool             `json:"supported"`
+	Supported bool             `json:"supported"`     // compression
 }
 
 type SignalResp struct {

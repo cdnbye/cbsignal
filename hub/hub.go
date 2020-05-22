@@ -75,7 +75,8 @@ func SendJsonToClient(peerId string, value interface{}, allowCompress bool)  {
 		}
 	}()
 
-	if h.CompressEnable && allowCompress && peer.CompressSupported {
+	// 小于70的字符串不压缩
+	if h.CompressEnable && allowCompress && peer.CompressSupported && len(b)>=70 {
 		var buf bytes.Buffer
 		compressor, err := zlib.NewWriterLevel(&buf, h.CompressLevel)
 		if err != nil {
