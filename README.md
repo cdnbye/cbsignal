@@ -6,6 +6,7 @@ git clone https://github.com/cdnbye/cbsignal.git
 cd cbsignal
 make
 ```
+or directly use compiled file `cbsignal` .
 
 ### deploy
 Upload binary file, admin.sh and config.yaml to server, create `cert` directory with `signaler.pem` and `signaler.key`, then start service:
@@ -35,6 +36,7 @@ git clone https://github.com/cdnbye/cbsignal.git
 cd cbsignal
 make
 ```
+或者直接使用已经编译好的可执行文件 `cbsignal`
 
 #### 部署
 将编译生成的二进制文件、admin.sh和config.yaml上传至服务器，并在同级目录创建`cert`文件夹，将证书和秘钥文件分别改名为`signaler.pem`和`signaler.key`放入cert，之后启动服务：
