@@ -167,6 +167,12 @@ func main() {
 		w.Write([]byte(fmt.Sprintf("%d", hub.GetClientNum())))
 
 	})
+	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
+		//fmt.Printf("URL: %s\n", r.URL.String())
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Write([]byte(fmt.Sprintf("%s", viper.GetString("version"),)))
+
+	})
 
 	if  SignalPortTLS != "" && Exists(signalCert) && Exists(signalKey) {
 		go func() {
