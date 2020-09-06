@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -22,6 +23,11 @@ var (
 	cfg = pflag.StringP("config", "c", "", "Config file path.")
 	newline = []byte{'\n'}
 	space   = []byte{' '}
+
+	allowMap = make(map[string]bool)            // allow list of domain
+	useAllowList = false
+	blockMap = make(map[string]bool)            // block list of domain
+	useBlockList = false
 )
 
 func init()  {
@@ -56,16 +62,54 @@ func init()  {
 	if err := log.InitWithConfig(&passLagerCfg); err != nil {
 		fmt.Errorf("Initialize logger %s", err)
 	}
+
+	// Initialize allow list and block list
+	allowList := viper.GetStringSlice("allow_list")
+	if len(allowList) > 0 {
+		useAllowList = true
+		for _, v := range allowList {
+			allowMap[v] = true
+		}
+	}
+	blockList := viper.GetStringSlice("block_list")
+	if len(blockList) > 0 {
+		useBlockList = true
+		for _, v := range blockList{
+			blockMap[v] = true
+		}
+	}
+	if useBlockList && useAllowList {
+		panic("Do not use allowList and blockList at the same time")
+	}
+
 }
 
 //var EventsCollector *eventsCollector
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
+
 	// Upgrade connection
 	//log.Printf("UpgradeHTTP")
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
 	if err != nil {
 		return
+	}
+
+	origin := r.Header.Get("Origin")
+	if origin != "" {
+		domain := GetDomain(origin)
+		log.Debugf("domain: %s", domain)
+		if useAllowList && !allowMap[domain] {
+			log.Infof("domian %s is out of allowList", domain)
+			//wsutil.WriteServerMessage(conn, ws.OpClose, nil)
+			conn.Close()
+			return
+		} else if useBlockList && blockMap[domain] {
+			log.Infof("domian %s is in blockList", domain)
+			//wsutil.WriteServerMessage(conn, ws.OpClose, nil)
+			conn.Close()
+			return
+		}
 	}
 
 	r.ParseForm()
@@ -209,4 +253,14 @@ func Exists(path string) bool {
 		return false
 	}
 	return true
+}
+
+// 获取域名（不包含端口）
+func GetDomain(uri string) string {
+	parsed, err := url.Parse(uri)
+	if err != nil {
+		return ""
+	}
+	a := strings.Split(parsed.Host, ":")
+	return a[0]
 }

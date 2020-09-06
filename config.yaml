@@ -1,4 +1,6 @@
 
+version: 1.1.0
+
 log:
   writers: file                # 输出位置，有两个可选项 —— file 和 stdout。选择 file 会将日志记录到 logger_file 指定的日志文件中，选择 stdout 会将日志输出到标准输出，当然也可以两者同时选择
   logger_level: WARN           # 日志级别，DEBUG、INFO、WARN、ERROR、FATAL
@@ -21,7 +23,19 @@ compression:
   level: 2                     # -1: DefaultCompression   1: BestSpeed  <---> 9: BestCompression
   activationRatio: 100         # 0 <---> 100   (%)
 
-version: 1.0.0
+# 允许连接的域名白名单（不包含端口）   Whitelist of domain names allowed to connect（Port not included）
+allow_list:
+# - "localhost"
+
+# 不允许连接的域名黑名单（不包含端口）   Domain name blacklist not allowed to connect（Port not included）
+block_list:
+# - "localhost"
+
+
+
+
+
+
 
 
 
