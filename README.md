@@ -15,6 +15,16 @@ chmod +x admin.sh
 ./admin.sh start
 ```
 
+### Set up Allow List
+Domian Allow List allows you to limit the use of signaling service to your website and your streams, thus preventing unwanted use of your service on a third-party site. Set up your domain names in the config.yaml:
+```yaml
+allow_list:
+  - "localhost"
+  - "YOUE_DOMAIN1"
+  - "YOUE_DOMAIN2"
+```
+If the accessing domain name doesn't match your whitelisted domain names, clients will not be able to connect to the server and will not receive or generate any peer traffic.
+
 ### test
 ```
 import Hls from 'cdnbye';
@@ -44,6 +54,15 @@ make
 chmod +x admin.sh
 echo -17 > /proc/$(pidof cbsignal)/oom_adj     # 防止进程被OOM killer杀死
 ./admin.sh start
+```
+
+### 设置域名白名单
+域名白名单可以防止未经授权的网站使用你的信令服务，可以在 config.yaml 文件中进行设置：
+```yaml
+allow_list:
+  - "localhost"
+  - "YOUE_DOMAIN1"
+  - "YOUE_DOMAIN2"
 ```
 
 ### 测试
