@@ -31,7 +31,7 @@ allow_list:
 block_list:
 # - "localhost"
 
-# 预估的信令最大连接数
+# 自定义的信令最大连接数
 capacity: 30000
 
 

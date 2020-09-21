@@ -6,7 +6,7 @@ git clone https://github.com/cdnbye/cbsignal.git
 cd cbsignal
 make
 ```
-or directly use compiled file `cbsignal` .
+or directly use compiled file [cbsignal](https://github.com/cdnbye/cbsignal/releases) .
 
 ### deploy
 Upload binary file, admin.sh and config.yaml to server, create `cert` directory with `signaler.pem` and `signaler.key`, then start service:
@@ -39,6 +39,26 @@ var hls = new Hls(hlsjsConfig);
 // Use `hls` just like the usual hls.js ...
 ```
 
+### Get real-time information of signal service
+```
+GET /info
+```
+Response:
+```
+Status: 200
+
+{
+  "ret": 0,
+  "data": {
+      "version"
+      "current_connections"
+      "capacity"
+      "utilization_rate"
+      "compression_enabled"
+  }
+}
+```
+
 ### go语言版的 CDNBye 信令服务器，可用于Web、安卓、iOS SDK等所有CDNBye产品
 #### 编译二进制文件
 ```bash
@@ -46,7 +66,7 @@ git clone https://github.com/cdnbye/cbsignal.git
 cd cbsignal
 make
 ```
-或者直接使用已经编译好的可执行文件 `cbsignal`
+或者直接使用已经编译好的可执行文件 [cbsignal](https://github.com/cdnbye/cbsignal/releases)
 
 #### 部署
 将编译生成的二进制文件、admin.sh和config.yaml上传至服务器，并在同级目录创建`cert`文件夹，将证书和秘钥文件分别改名为`signaler.pem`和`signaler.key`放入cert，之后启动服务：
@@ -78,6 +98,27 @@ var hlsjsConfig = {
 var hls = new Hls(hlsjsConfig);
 // Use `hls` just like the usual hls.js ...
 ```
+
+### 通过API获取信令服务的实时信息
+```
+GET /info
+```
+响应:
+```
+Status: 200
+
+{
+  "ret": 0,
+  "data": {
+      "version"
+      "current_connections"
+      "capacity"
+      "utilization_rate"
+      "compression_enabled"
+  }
+}
+```
+
 <!--
 ### 配置建议
 信令对内存和带宽要求比较高，大概每16GB内存可以容纳20万并发连接数。
