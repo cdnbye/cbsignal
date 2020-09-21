@@ -1,5 +1,5 @@
 
-version: 1.1.0
+version: 1.1.1
 
 log:
   writers: file                # 输出位置，有两个可选项 —— file 和 stdout。选择 file 会将日志记录到 logger_file 指定的日志文件中，选择 stdout 会将日志输出到标准输出，当然也可以两者同时选择
@@ -30,6 +30,9 @@ allow_list:
 # 不允许连接的域名黑名单（不包含端口）   Domain name blacklist not allowed to connect（Port not included）
 block_list:
 # - "localhost"
+
+# 预估的信令最大连接数
+capacity: 30000
 
 
 

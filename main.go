@@ -5,6 +5,7 @@ import (
 	"cbsignal/client"
 	"cbsignal/handler"
 	"cbsignal/hub"
+	"encoding/json"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -28,6 +29,8 @@ var (
 	useAllowList = false
 	blockMap = make(map[string]bool)            // block list of domain
 	useBlockList = false
+
+	capacity int64 = 30000
 )
 
 func init()  {
@@ -82,6 +85,10 @@ func init()  {
 		panic("Do not use allowList and blockList at the same time")
 	}
 
+    capacity = viper.GetInt64("capacity")
+    if capacity <= 0 {
+		panic("capacity <= 0")
+	}
 }
 
 //var EventsCollector *eventsCollector
@@ -155,6 +162,19 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
+type Resp struct {
+	Ret int `json:"ret"`
+	Data *SignalInfo `json:"data"`
+} 
+
+type SignalInfo struct {
+	Version string `json:"version"`
+	CurrentConnections int64 `json:"current_connections"`
+	Capacity int64 `json:"capacity"`
+	UtilizationRate float32 `json:"utilization_rate"`
+	CompressionEnabled bool `json:"compression_enabled"`
+}
+
 func main() {
 
 	// Catch SIGINT signals
@@ -216,6 +236,32 @@ func main() {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Write([]byte(fmt.Sprintf("%s", viper.GetString("version"),)))
 
+	})
+	http.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+		//fmt.Printf("URL: %s\n", r.URL.String())
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		currentConnections := hub.GetClientNum()
+		utilizationRate := float32(currentConnections)/float32(capacity)
+		info := SignalInfo{
+			Version:            viper.GetString("version"),
+			CurrentConnections: hub.GetClientNum(),
+			Capacity:           capacity,
+			UtilizationRate:    utilizationRate,
+			CompressionEnabled: viper.GetBool("compression.enable"),
+		}
+		resp := Resp{
+			Ret:  0,
+			Data: &info,
+		}
+		b, err := json.Marshal(resp)
+		if err != nil {
+			resp, _ := json.Marshal(Resp{
+				Ret:  -1,
+				Data: nil,
+			})
+			w.Write(resp)
+		}
+		w.Write(b)
 	})
 
 	if  SignalPortTLS != "" && Exists(signalCert) && Exists(signalKey) {
