@@ -1,12 +1,13 @@
 ### The signal server of [hlsjs-p2p-engine](https://github.com/cdnbye/hlsjs-p2p-engine), [ios-p2p-engine](https://github.com/cdnbye/ios-p2p-engine) and [android-p2p-engine](https://github.com/cdnbye/android-p2p-engine)
 
 ### build
+Make sure that the golang development environment is installed
 ```bash
 git clone https://github.com/cdnbye/cbsignal.git
 cd cbsignal
 make
 ```
-or directly use compiled file [cbsignal](https://github.com/cdnbye/cbsignal/releases) .
+or directly use compiled linux file [cbsignal](https://github.com/cdnbye/cbsignal/releases) .
 
 ### deploy
 Upload binary file, admin.sh and config.yaml to server, create `cert` directory with `signaler.pem` and `signaler.key`, then start service:
@@ -61,12 +62,13 @@ Status: 200
 
 ### go语言版的 CDNBye 信令服务器，可用于Web、安卓、iOS SDK等所有CDNBye产品
 #### 编译二进制文件
+请先确保已安装golang开发环境
 ```bash
 git clone https://github.com/cdnbye/cbsignal.git
 cd cbsignal
 make
 ```
-或者直接使用已经编译好的可执行文件 [cbsignal](https://github.com/cdnbye/cbsignal/releases)
+或者直接使用已经编译好的linux可执行文件 [cbsignal](https://github.com/cdnbye/cbsignal/releases)
 
 #### 部署
 将编译生成的二进制文件、admin.sh和config.yaml上传至服务器，并在同级目录创建`cert`文件夹，将证书和秘钥文件分别改名为`signaler.pem`和`signaler.key`放入cert，之后启动服务：
