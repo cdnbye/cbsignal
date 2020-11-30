@@ -86,7 +86,7 @@ func init()  {
 	}
 
     capacity = viper.GetInt64("capacity")
-    if capacity <= 0 {
+    if capacity < 0 {
 		panic("capacity <= 0")
 	}
 }
