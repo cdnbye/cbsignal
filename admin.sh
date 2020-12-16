@@ -107,15 +107,8 @@ function stop()
 
 function restart()
 {
-	sudo systemctl restart $SERVICE
-	echo "sleeping..." &&  sleep $INTERVAL
-
-	if [ "`pgrep $SERVER`" == "" ];then
-		echo "$SERVER start failed"
-		exit 1
-	fi
-
-	echo "$SERVER start succeed"
+	stop
+  start
 }
 
 function test()
