@@ -42,6 +42,17 @@ func DoRegister(client *client.Client) {
 	}
 }
 
+func DoRegisterRemoteClient(peerId string, addr string) {
+	c := &client.Client{
+		LocalNode:    false,
+		Conn:         nil,
+		PeerId:       peerId,
+		InvalidPeers: make(map[string]bool),      // TODO
+		RpcNodeAddr:  addr,
+	}
+	DoRegister(c)
+}
+
 func DoUnregister(client *client.Client) {
 	//	logrus.Debugf("[Hub.doUnregister] %s", client.id)
 
@@ -75,7 +86,7 @@ func SendJsonToClient(peerId string, value interface{}, allowCompress bool)  {
 		}
 	}()
 
-	// 小于70的字符串不压缩
+	// 小于70的字符串不压缩  TODO
 	if h.CompressEnable && allowCompress && peer.CompressSupported && len(b)>=70 {
 		var buf bytes.Buffer
 		compressor, err := zlib.NewWriterLevel(&buf, h.CompressLevel)

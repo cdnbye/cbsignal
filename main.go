@@ -5,23 +5,27 @@ import (
 	"cbsignal/client"
 	"cbsignal/handler"
 	"cbsignal/hub"
-	"encoding/json"
+	"cbsignal/rpcservice/heartbeat"
+	"cbsignal/util"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/lexkong/log"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"net"
 	"net/http"
-	"net/url"
+	"net/rpc"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var (
 	cfg = pflag.StringP("config", "c", "", "Config file path.")
+	flagMaster = pflag.BoolP("master", "m", false, "Master or slave")
 	newline = []byte{'\n'}
 	space   = []byte{' '}
 
@@ -30,7 +34,21 @@ var (
 	blockMap = make(map[string]bool)            // block list of domain
 	useBlockList = false
 
-	capacity int64 = 30000
+	isMaster bool
+	masterIp string
+	masterPort string
+	selfIp string
+	selfPort string
+
+	signalPort     string
+	signalPortTLS  string
+	signalCertPath string
+	signalKeyPath  string
+
+	version string
+	compressionEnabled bool
+	compressionLevel int
+	compressionActivationRatio int
 )
 
 func init()  {
@@ -85,13 +103,111 @@ func init()  {
 		panic("Do not use allowList and blockList at the same time")
 	}
 
-    capacity = viper.GetInt64("capacity")
-    if capacity < 0 {
-		panic("capacity <= 0")
+	masterIp = viper.GetString("cluster.master.ip")
+	masterPort = viper.GetString("cluster.master.port")
+	selfIp = util.GetInternalIP()
+	selfPort = viper.GetString("cluster.self_port")
+
+	isMaster = selfIp == masterIp
+	if *flagMaster {
+		isMaster = true
 	}
+	if masterIp == "127.0.0.1" || masterIp == "localhost" || masterIp == "0.0.0.1" {
+		isMaster = true
+	}
+	log.Warnf("isMaster %t", isMaster)
+
+	signalPort = viper.GetString("port")
+	signalPortTLS = viper.GetString("tls.port")
+	signalCertPath = viper.GetString("tls.cert")
+	signalKeyPath = viper.GetString("tls.key")
+
+	version = viper.GetString("version")
+	compressionEnabled = viper.GetBool("compression.enable")
+	compressionLevel = viper.GetInt("compression.level")
+	compressionActivationRatio = viper.GetInt("compression.activationRatio")
 }
 
-//var EventsCollector *eventsCollector
+func main() {
+
+	// Catch SIGINT signals
+	intrChan := make(chan os.Signal)
+	signal.Notify(intrChan, os.Interrupt)
+
+	// Increase resources limitations
+	var rLimit syscall.Rlimit
+	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
+		panic(err)
+	}
+	rLimit.Cur = rLimit.Max
+	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
+		panic(err)
+	}
+
+	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
+
+	http.HandleFunc("/ws", wsHandler)
+	http.HandleFunc("/wss", wsHandler)
+	http.HandleFunc("/", wsHandler)
+	http.HandleFunc("/count", handler.CountHandler())
+	http.HandleFunc("/version", handler.VersionHandler(version))
+	http.HandleFunc("/info", handler.StatsHandler(version, compressionEnabled))
+
+	// rpcservice
+	if isMaster {
+		go func() {
+			log.Warnf("register rpcservice heartbeat service on tcp address: %s\n", masterPort)
+			if err := heartbeat.RegisterHeartbeatService();err != nil {
+				panic(err)
+			}
+			listener, err := net.Listen("tcp", masterPort)
+			if err != nil {
+				log.Fatal("ListenTCP error:", err)
+			}
+			for {
+				conn, err := listener.Accept()
+				if err != nil {
+					log.Fatal("Accept error:", err)
+				}
+				go rpc.ServeConn(conn)
+			}
+		}()
+	}
+	time.Sleep(2*time.Second)
+
+	masterAddr := masterIp + masterPort
+	selfAddr := selfIp + selfPort
+	log.Infof("DialHeartbeatService %s", masterAddr)
+	heartbeatClient := heartbeat.NewHeartbeatClient(masterAddr, selfAddr)
+	heartbeatClient.DialHeartbeatService()
+	heartbeatClient.StartHeartbeat()
+
+	if  signalPortTLS != "" && util.Exists(signalCertPath) && util.Exists(signalKeyPath) {
+		go func() {
+			log.Warnf("Start to listening the incoming requests on https address: %s\n", signalPortTLS)
+			err := http.ListenAndServeTLS(signalPortTLS, signalCertPath, signalKeyPath, nil)
+			if err != nil {
+				log.Fatal("ListenAndServe: ", err)
+			}
+		}()
+	}
+
+	if signalPort != "" {
+		go func() {
+			log.Warnf("Start to listening the incoming requests on http address: %s\n", signalPort)
+			err := http.ListenAndServe(signalPort, nil)
+			if err != nil {
+				log.Fatal("ListenAndServe: ", err)
+			}
+		}()
+	}
+
+	<-intrChan
+
+	log.Info("Shutting down server...")
+}
+
+
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -104,7 +220,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	origin := r.Header.Get("Origin")
 	if origin != "" {
-		domain := GetDomain(origin)
+		domain := util.GetDomain(origin)
 		log.Debugf("domain: %s", domain)
 		if useAllowList && !allowMap[domain] {
 			log.Infof("domian %s is out of allowList", domain)
@@ -128,8 +244,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := &client.Client{
-		Conn: conn,
-		PeerId: id,
+		LocalNode:    true,
+		Conn:         conn,
+		PeerId:       id,
 		InvalidPeers: make(map[string]bool),
 	}
 	hub.DoRegister(c)
@@ -162,151 +279,4 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-type Resp struct {
-	Ret int `json:"ret"`
-	Data *SignalInfo `json:"data"`
-} 
 
-type SignalInfo struct {
-	Version string `json:"version"`
-	CurrentConnections int64 `json:"current_connections"`
-	Capacity int64 `json:"capacity"`
-	UtilizationRate float32 `json:"utilization_rate"`
-	CompressionEnabled bool `json:"compression_enabled"`
-}
-
-func main() {
-
-	// Catch SIGINT signals
-	intrChan := make(chan os.Signal)
-	signal.Notify(intrChan, os.Interrupt)
-
-	pflag.Parse()
-
-	SignalPort := viper.GetString("port")
-	SignalPortTLS := viper.GetString("tls.port")
-	signalCert := viper.GetString("tls.cert")
-	signalKey := viper.GetString("tls.key")
-
-	// Initialize viper
-	if *cfg != "" {
-		viper.SetConfigFile(*cfg) // 如果指定了配置文件，则解析指定的配置文件
-	} else {
-		viper.AddConfigPath("./") // 如果没有指定配置文件，则解析默认的配置文件
-		viper.SetConfigName("config")
-	}
-	viper.SetConfigType("yaml")     // 设置配置文件格式为YAML
-	viper.AutomaticEnv()            // 读取匹配的环境变量
-	replacer := strings.NewReplacer(".", "_")
-	viper.SetEnvKeyReplacer(replacer)
-	if err := viper.ReadInConfig(); err != nil { // viper解析配置文件
-		log.Fatal("Initialize viper", err)
-	}
-
-	// Increase resources limitations
-	var rLimit syscall.Rlimit
-	if err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
-		panic(err)
-	}
-	rLimit.Cur = rLimit.Max
-	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
-		panic(err)
-	}
-
-	// Enable pprof hooks
-	//go func() {
-	//	if err := http.ListenAndServe("localhost:6060", nil); err != nil {
-	//		log.Fatalf("pprof failed: %v", err)
-	//	}
-	//}()
-
-	hub.Init(viper.GetBool("compression.enable"), viper.GetInt("compression.level"), viper.GetInt("compression.activationRatio"))
-
-	http.HandleFunc("/ws", wsHandler)
-	http.HandleFunc("/wss", wsHandler)
-	http.HandleFunc("/", wsHandler)
-	http.HandleFunc("/count", func(w http.ResponseWriter, r *http.Request) {
-		//fmt.Printf("URL: %s\n", r.URL.String())
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write([]byte(fmt.Sprintf("%d", hub.GetClientNum())))
-
-	})
-	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		//fmt.Printf("URL: %s\n", r.URL.String())
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write([]byte(fmt.Sprintf("%s", viper.GetString("version"),)))
-
-	})
-	http.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
-		//fmt.Printf("URL: %s\n", r.URL.String())
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		currentConnections := hub.GetClientNum()
-		utilizationRate := float32(currentConnections)/float32(capacity)
-		info := SignalInfo{
-			Version:            viper.GetString("version"),
-			CurrentConnections: hub.GetClientNum(),
-			Capacity:           capacity,
-			UtilizationRate:    utilizationRate,
-			CompressionEnabled: viper.GetBool("compression.enable"),
-		}
-		resp := Resp{
-			Ret:  0,
-			Data: &info,
-		}
-		b, err := json.Marshal(resp)
-		if err != nil {
-			resp, _ := json.Marshal(Resp{
-				Ret:  -1,
-				Data: nil,
-			})
-			w.Write(resp)
-		}
-		w.Write(b)
-	})
-
-	if  SignalPortTLS != "" && Exists(signalCert) && Exists(signalKey) {
-		go func() {
-			log.Warnf("Start to listening the incoming requests on https address: %s\n", SignalPortTLS)
-			err := http.ListenAndServeTLS(SignalPortTLS, signalCert, signalKey, nil)
-			if err != nil {
-				log.Fatal("ListenAndServe: ", err)
-			}
-		}()
-	}
-
-	if SignalPort != "" {
-		go func() {
-			log.Warnf("Start to listening the incoming requests on http address: %s\n", SignalPort)
-			err := http.ListenAndServe(SignalPort, nil)
-			if err != nil {
-				log.Fatal("ListenAndServe: ", err)
-			}
-		}()
-	}
-
-	<-intrChan
-
-	log.Info("Shutting down server...")
-}
-
-// 判断所给路径文件/文件夹是否存在
-func Exists(path string) bool {
-	_, err := os.Stat(path)    //os.Stat获取文件信息
-	if err != nil {
-		if os.IsExist(err) {
-			return true
-		}
-		return false
-	}
-	return true
-}
-
-// 获取域名（不包含端口）
-func GetDomain(uri string) string {
-	parsed, err := url.Parse(uri)
-	if err != nil {
-		return ""
-	}
-	a := strings.Split(parsed.Host, ":")
-	return a[0]
-}

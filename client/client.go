@@ -27,6 +27,10 @@ type Client struct {
 	InvalidPeers    map[string]bool    // 已经无效的peerId
 
 	CompressSupported bool             // 是否支持压缩
+
+	LocalNode bool             // 是否本节点
+
+	RpcNodeAddr string       // rpc节点id
 }
 
 func (c *Client)SendMessage(msg []byte) error {
