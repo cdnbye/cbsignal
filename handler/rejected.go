@@ -13,13 +13,13 @@ type RejectedHandler struct {
 
 func (s *RejectedHandler)Handle() {
 	h := hub.GetInstance()
-	//log.Println(s.Msg.To_peer_id)
-	_, ok := h.Clients.Load(s.Msg.To_peer_id)        //判断节点是否还在线
+	//log.Println(s.Msg.ToPeerId)
+	_, ok := h.Clients.Load(s.Msg.ToPeerId) //判断节点是否还在线
 	if ok {
 		resp := SignalResp{
 			Action: "rejected",
 			FromPeerId: s.Cli.PeerId,
 		}
-		hub.SendJsonToClient(s.Msg.To_peer_id, resp, true)
+		hub.SendJsonToClient(s.Msg.ToPeerId, resp, true)
 	}
 }

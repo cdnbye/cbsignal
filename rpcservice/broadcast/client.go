@@ -6,22 +6,26 @@ import (
 )
 
 type Client struct {
-	Peers map[string]*rpcservice.Peer
+	nodeHub *rpcservice.NodeHub
+	selfAddr string
 }
 
-func NewBroadcastClient(peers map[string]*rpcservice.Peer) *Client {
+func NewBroadcastClient(nodeHub *rpcservice.NodeHub, addr string) *Client {
 	client := Client{
-		Peers: peers,
+		nodeHub: nodeHub,
+		selfAddr: addr,
 	}
 	return &client
 }
 
 func (c *Client) BroadcastMsgJoin(id string)  {
-	req := JoinLeaveReq{
-		Id: id,
+	log.Infof("BroadcastMsgJoin %s", id)
+	req := rpcservice.JoinLeaveReq{
+		PeerId: id,
+		Addr: c.selfAddr,
 	}
-	var resp JoinLeaveResp
-	for _, peer := range c.Peers {
+	var resp rpcservice.RpcResp
+	for _, peer := range c.nodeHub.GetAll() {
 		if err := peer.SendMsgJoin(req, &resp); err != nil {
 			log.Warnf("peer %s SendMsgJoin failed", peer.Addr())
 		}
@@ -29,11 +33,11 @@ func (c *Client) BroadcastMsgJoin(id string)  {
 }
 
 func (c *Client) BroadcastMsgLeave(id string)  {
-	req := JoinLeaveReq{
-		Id: id,
+	req := rpcservice.JoinLeaveReq{
+		PeerId: id,
 	}
-	var resp JoinLeaveResp
-	for _, peer := range c.Peers {
+	var resp rpcservice.RpcResp
+	for _, peer := range c.nodeHub.GetAll() {
 		if err := peer.SendMsgLeave(req, &resp); err != nil {
 			log.Warnf("peer %s SendMsgLeave failed", peer.Addr())
 		}

@@ -1,5 +1,5 @@
 
-version: 1.1.1
+version: 2.0.0
 
 log:
   writers: stdout                # 输出位置，有两个可选项 —— file 和 stdout。选择 file 会将日志记录到 logger_file 指定的日志文件中，选择 stdout 会将日志输出到标准输出，当然也可以两者同时选择
@@ -20,7 +20,7 @@ port: :802
 cluster:
   self_port: :56624
   master:
-    ip: 10.0.4.4
+    ip: 127.0.0.1
     port: :56623
 
 # 开启压缩后可以减少信令服务器出带宽

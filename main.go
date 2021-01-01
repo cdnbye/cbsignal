@@ -5,7 +5,9 @@ import (
 	"cbsignal/client"
 	"cbsignal/handler"
 	"cbsignal/hub"
+	"cbsignal/rpcservice/broadcast"
 	"cbsignal/rpcservice/heartbeat"
+	signalservice "cbsignal/rpcservice/signalmsg"
 	"cbsignal/util"
 	"fmt"
 	"github.com/gobwas/ws"
@@ -49,6 +51,8 @@ var (
 	compressionEnabled bool
 	compressionLevel int
 	compressionActivationRatio int
+
+	broadcastClient *broadcast.Client
 )
 
 func init()  {
@@ -103,18 +107,22 @@ func init()  {
 		panic("Do not use allowList and blockList at the same time")
 	}
 
-	masterIp = viper.GetString("cluster.master.ip")
-	masterPort = viper.GetString("cluster.master.port")
 	selfIp = util.GetInternalIP()
 	selfPort = viper.GetString("cluster.self_port")
+	masterIp = viper.GetString("cluster.master.ip")
+	if masterIp == "127.0.0.1" || masterIp == "localhost" || masterIp == "0.0.0.0" {
+		isMaster = true
+	} else if masterIp == "" {
+		//masterIp = "127.0.0.1"
+		selfIp = "127.0.0.1"
+	}
+	masterPort = viper.GetString("cluster.master.port")
 
-	isMaster = selfIp == masterIp
+	//isMaster = selfIp == masterIp
 	if *flagMaster {
 		isMaster = true
 	}
-	if masterIp == "127.0.0.1" || masterIp == "localhost" || masterIp == "0.0.0.1" {
-		isMaster = true
-	}
+
 	log.Warnf("isMaster %t", isMaster)
 
 	signalPort = viper.GetString("port")
@@ -126,6 +134,7 @@ func init()  {
 	compressionEnabled = viper.GetBool("compression.enable")
 	compressionLevel = viper.GetInt("compression.level")
 	compressionActivationRatio = viper.GetInt("compression.activationRatio")
+
 }
 
 func main() {
@@ -154,25 +163,24 @@ func main() {
 	http.HandleFunc("/info", handler.StatsHandler(version, compressionEnabled))
 
 	// rpcservice
-	if isMaster {
-		go func() {
-			log.Warnf("register rpcservice heartbeat service on tcp address: %s\n", masterPort)
-			if err := heartbeat.RegisterHeartbeatService();err != nil {
-				panic(err)
-			}
-			listener, err := net.Listen("tcp", masterPort)
+	go func() {
+		// 注册rpc心跳服务
+		log.Warnf("register rpcservice service on tcp address: %s\n", selfPort)
+		if err := heartbeat.RegisterHeartbeatService();err != nil {
+			panic(err)
+		}
+		listener, err := net.Listen("tcp", selfPort)
+		if err != nil {
+			log.Fatal("ListenTCP error:", err)
+		}
+		for {
+			conn, err := listener.Accept()
 			if err != nil {
-				log.Fatal("ListenTCP error:", err)
+				log.Fatal("Accept error:", err)
 			}
-			for {
-				conn, err := listener.Accept()
-				if err != nil {
-					log.Fatal("Accept error:", err)
-				}
-				go rpc.ServeConn(conn)
-			}
-		}()
-	}
+			go rpc.ServeConn(conn)
+		}
+	}()
 	time.Sleep(2*time.Second)
 
 	masterAddr := masterIp + masterPort
@@ -181,6 +189,17 @@ func main() {
 	heartbeatClient := heartbeat.NewHeartbeatClient(masterAddr, selfAddr)
 	heartbeatClient.DialHeartbeatService()
 	heartbeatClient.StartHeartbeat()
+
+	broadcastClient = broadcast.NewBroadcastClient(heartbeatClient.NodeHub(), selfAddr)
+	// 注册rpc广播服务
+	if err := broadcast.RegisterBroadcastService();err != nil {
+		panic(err)
+	}
+
+	// 注册rpc信令服务
+	if err := signalservice.RegisterSignalService();err != nil {
+		panic(err)
+	}
 
 	if  signalPortTLS != "" && util.Exists(signalCertPath) && util.Exists(signalKeyPath) {
 		go func() {
@@ -250,13 +269,15 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		InvalidPeers: make(map[string]bool),
 	}
 	hub.DoRegister(c)
+	broadcastClient.BroadcastMsgJoin(id)
 
 	go func() {
 		defer func() {
 			// 节点离开
 			log.Infof("peer leave")
-			hub.DoUnregister(c)
+			hub.DoUnregister(id)
 			conn.Close()
+			broadcastClient.BroadcastMsgLeave(id)
 		}()
 
 		for {
@@ -266,7 +287,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				//log.Printf("ReadClientData " + err.Error())
 				break
 			}
-			//log.Printf("ReadClientData " + string(msg))
+			//log.Infof("ReadClientData from " + id)
 			msg = bytes.TrimSpace(bytes.Replace(msg, newline, space, -1))
 			hdr, err := handler.NewHandler(msg, c)
 			if err != nil {

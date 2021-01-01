@@ -1,6 +1,8 @@
 package heartbeat
 
 import (
+	"cbsignal/client"
+	"cbsignal/hub"
 	"cbsignal/rpcservice"
 	"github.com/lexkong/log"
 	"net/rpc"
@@ -13,30 +15,39 @@ const (
 )
 
 
-type Resp struct {
+type PongResp struct {
 	Nodes []string
 }
 
-type HeartbeatService struct {
-	Peers map[string]*rpcservice.Peer
+type Peer struct {
+	PeerId          string              //唯一标识
+	RpcNodeAddr string       // rpc节点id
+}
+
+type PeersResp struct {
+	Peers []*Peer
+}
+
+type Service struct {
+	Nodes map[string]*rpcservice.Node // master维护的node集合
 }
 
 func RegisterHeartbeatService() error {
-	log.Infof("register rpcservice service %s", HEARTBEAT_SERVICE)
-	s := new(HeartbeatService)
-	s.Peers = make(map[string]*rpcservice.Peer)
+	log.Infof("register rpc service %s", HEARTBEAT_SERVICE)
+	s := new(Service)
+	s.Nodes = make(map[string]*rpcservice.Node)
 	// 定时删除过期节点
 	go func() {
 		for {
 			time.Sleep(CHECK_INTERVAL*time.Second)
 			now := time.Now().Unix()
-			//log.Infof("check peer ts")
-			for addr, peer := range s.Peers {
-				//log.Infof("now %d check peer ts %d", now, peer.Ts())
-				if now - peer.Ts() > EXPIRE_TOMEOUT {
-					// peer 过期
-					log.Warnf("peer %s expired, delete", addr)
-					delete(s.Peers, addr)
+			//log.Infof("check node ts")
+			for addr, node := range s.Nodes {
+				//log.Infof("now %d check node ts %d", now, node.Ts())
+				if now - node.Ts() > EXPIRE_TOMEOUT {
+					// node 过期
+					log.Warnf("node %s expired, delete", addr)
+					delete(s.Nodes, addr)
 				}
 			}
 		}
@@ -44,21 +55,36 @@ func RegisterHeartbeatService() error {
 	return rpc.RegisterName(HEARTBEAT_SERVICE, s)
 }
 
-func (h *HeartbeatService) Pong(request Req, reply *Resp) error {
+func (h *Service) Pong(request PingReq, reply *PongResp) error {
 	addr := request.Addr
-	log.Infof("HeartbeatService receive %s", addr)
-	p, ok := h.Peers[addr]
+	//log.Infof("receive ping from %s", addr)
+	p, ok := h.Nodes[addr]
 	if ok {
 		p.UpdateTs()
 	} else {
-		h.Peers[addr] = rpcservice.NewPeer(addr)
+		h.Nodes[addr] = rpcservice.NewPeer(addr)
 	}
 
-	for key, _ := range h.Peers {
+	for key, _ := range h.Nodes {
 		if key != addr {
 			reply.Nodes = append(reply.Nodes, key)
 		}
 	}
+	return nil
+}
 
+func (h *Service)Peers(request GetPeersReq, reply *PeersResp) error {
+	var peers []*Peer
+	hub.GetInstance().Clients.Range(func(key, value interface{}) bool {
+		cli := value.(*client.Client)
+		peer := Peer{
+			PeerId:      cli.PeerId,
+			RpcNodeAddr: cli.RpcNodeAddr,
+		}
+		peers = append(peers, &peer)
+		return true
+	})
+	log.Infof("send %d peers to %s", len(peers), request.Addr)
+	reply.Peers = peers
 	return nil
 }

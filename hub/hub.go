@@ -1,9 +1,7 @@
 package hub
 
 import (
-	"bytes"
 	"cbsignal/client"
-	"compress/zlib"
 	"encoding/json"
 	"github.com/lexkong/log"
 	"sync"
@@ -35,7 +33,7 @@ func GetInstance() *Hub {
 }
 
 func DoRegister(client *client.Client) {
-	//	logrus.Debugf("[Hub.doRegister] %s", client.id)
+	log.Infof("hub DoRegister %s", client.PeerId)
 	if client.PeerId != "" {
 		h.Clients.Store(client.PeerId, client)
 		atomic.AddInt64(&h.ClientNum, 1)
@@ -53,22 +51,28 @@ func DoRegisterRemoteClient(peerId string, addr string) {
 	DoRegister(c)
 }
 
-func DoUnregister(client *client.Client) {
-	//	logrus.Debugf("[Hub.doUnregister] %s", client.id)
+func GetClient(peerId string) (*client.Client, bool) {
+	cli, ok := h.Clients.Load(peerId)
+	if !ok {
+		return nil, false
+	}
+	return cli.(*client.Client), true
+}
 
-	if client.PeerId == "" {
+func DoUnregister(peerId string) {
+	log.Infof("hub DoUnregister %s", peerId)
+	if peerId == "" {
 		return
 	}
-	atomic.AddInt64(&h.ClientNum, -1)
-	_, ok := h.Clients.Load(client.PeerId)
+	_, ok := h.Clients.Load(peerId)
 	if ok {
-		h.Clients.Delete(client.PeerId)
+		h.Clients.Delete(peerId)
+		atomic.AddInt64(&h.ClientNum, -1)
 	}
-
 }
 
 // send json object to a client with peerId
-func SendJsonToClient(peerId string, value interface{}, allowCompress bool)  {
+func SendJsonToClient(peerId string, value interface{}, allowCompress bool) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		log.Error("json.Marshal", err)
@@ -88,27 +92,6 @@ func SendJsonToClient(peerId string, value interface{}, allowCompress bool)  {
 
 	// 小于70的字符串不压缩  TODO
 	if h.CompressEnable && allowCompress && peer.CompressSupported && len(b)>=70 {
-		var buf bytes.Buffer
-		compressor, err := zlib.NewWriterLevel(&buf, h.CompressLevel)
-		if err != nil {
-			log.Warnf("compress failed %s", err)
-			return
-		}
-		if _, err := compressor.Write(b); err != nil {
-			log.Warnf("compress Write failed %s", err)
-			return
-		}
-		if err :=compressor.Close(); err != nil {
-			log.Warnf("compress Close failed %s", err)
-			return
-		}
-
-		log.Infof("before compress len %d", len(b))
-		log.Infof("after compress len %d", len(buf.Bytes()))
-
-		if err := peer.SendBinaryData(buf.Bytes()); err != nil {
-			log.Warnf("SendBinaryData", err)
-		}
 
 
 	} else {
@@ -121,6 +104,13 @@ func SendJsonToClient(peerId string, value interface{}, allowCompress bool)  {
 
 func GetClientNum() int64 {
 	return h.ClientNum
+}
+
+func ClearAll()  {
+	h.Clients.Range(func(key, value interface{}) bool {
+		h.Clients.Delete(key)
+		return true
+	})
 }
 
 

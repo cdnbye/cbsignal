@@ -10,9 +10,9 @@ type Handler interface {
 }
 
 type SignalMsg struct {
-	Action     string          `json:"action"`
-	To_peer_id string          `json:"to_peer_id"`
-	Data  interface{}          `json:"data"`
+	Action   string      `json:"action"`
+	ToPeerId string      `json:"to_peer_id"`
+	Data     interface{} `json:"data"`
 }
 
 type SignalResp struct {
@@ -22,19 +22,23 @@ type SignalResp struct {
 }
 
 func NewHandler(message []byte, cli *client.Client) (Handler, error) {
-	signalMsg := SignalMsg{}
-	if err := json.Unmarshal(message, &signalMsg); err != nil {
+	signal := SignalMsg{}
+	if err := json.Unmarshal(message, &signal); err != nil {
 		//log.Println(err)
 		return nil, err
 	}
-	switch signalMsg.Action {
+	return NewHandlerMsg(signal, cli)
+}
+
+func NewHandlerMsg(signal SignalMsg, cli *client.Client) (Handler, error) {
+	switch signal.Action {
 	case "signal":
-		return &SignalHandler{Msg: &signalMsg, Cli: cli}, nil
+		return &SignalHandler{Msg: &signal, Cli: cli}, nil
 	case "heartbeat":
 		return &HeartbeatHandler{Cli: cli}, nil
 	case "rejected":
-		return &RejectedHandler{Msg: &signalMsg, Cli: cli}, nil
+		return &RejectedHandler{Msg: &signal, Cli: cli}, nil
 	default:
-		return &ExceptionHandler{Msg: &signalMsg, Cli: cli}, nil
+		return &ExceptionHandler{Msg: &signal, Cli: cli}, nil
 	}
 }
