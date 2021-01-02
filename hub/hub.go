@@ -45,7 +45,7 @@ func DoRegisterRemoteClient(peerId string, addr string) {
 		LocalNode:    false,
 		Conn:         nil,
 		PeerId:       peerId,
-		InvalidPeers: make(map[string]bool),      // TODO
+		InvalidPeers: make(map[string]bool),
 		RpcNodeAddr:  addr,
 	}
 	DoRegister(c)
@@ -90,14 +90,18 @@ func SendJsonToClient(peerId string, value interface{}, allowCompress bool) {
 		}
 	}()
 
-	// 小于70的字符串不压缩  TODO
-	if h.CompressEnable && allowCompress && peer.CompressSupported && len(b)>=70 {
+	// 如果开启压缩  TODO
+	if h.CompressEnable && allowCompress {
 
 
 	} else {
 
 		if err := peer.SendMessage(b); err != nil {
 			log.Warnf("sendMessage", err)
+			if !peer.LocalNode {
+				log.Warnf("node error delete peer %s", peer.PeerId)
+				h.Clients.Delete(peer.PeerId)
+			}
 		}
 	}
 }

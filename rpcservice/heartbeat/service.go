@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	CHECK_INTERVAL = 30
+	CHECK_INTERVAL = 25
 	EXPIRE_TOMEOUT = 21
 )
 

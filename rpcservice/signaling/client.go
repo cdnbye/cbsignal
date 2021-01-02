@@ -1,4 +1,4 @@
-package signal
+package signaling
 
 import "cbsignal/rpcservice"
 

@@ -20,7 +20,7 @@ port: :802
 cluster:
   self_port: :56624
   master:
-    ip: 127.0.0.1
+#    ip: 127.0.0.1
     port: :56623
 
 # 开启压缩后可以减少信令服务器出带宽
@@ -35,8 +35,6 @@ allow_list:
 block_list:
 #  - "localhost"
 
-# 预估的信令最大连接数
-capacity: 30000
 
 
 

@@ -8,12 +8,14 @@ import (
 
 const (
 	BROADCAST_SERVICE = "BroadcastService"
-	JOIN = ".Join"
-	LEAVE = ".Leave"
-	SIGNAL_SERVICE = "SignalService"
-	SIGNAL = ".Signal"
-	DIAL_MAX_ATTENTS = 3
-	ATTENTS_INTERVAL = 2     // second
+	JOIN              = ".Join"
+	LEAVE             = ".Leave"
+	PONG              = ".Pong"
+	SIGNAL_SERVICE    = "SignalService"
+	SIGNAL            = ".Signal"
+	DIAL_MAX_ATTENTS  = 3
+	ATTENTS_INTERVAL  = 2     // second
+	PING_INTERVAL     = 5
 )
 
 type JoinLeaveReq struct {
@@ -31,10 +33,19 @@ type SignalReq struct {
 	Data     []byte
 }
 
+type Ping struct {
+
+}
+
+type Pong struct {
+
+}
+
 type Node struct {
 	*rpc.Client
 	addr string         // ip:port
 	ts int64
+	isAlive bool                 // 是否存活
 }
 
 func NewPeer(addr string) *Node {
@@ -45,7 +56,7 @@ func NewPeer(addr string) *Node {
 	return &peer
 }
 
-func (s *Node) DialPeers() error {
+func (s *Node) DialNode() error {
 	attemts := 0
 	for {
 		c, err := rpc.Dial("tcp", s.addr)
@@ -54,14 +65,15 @@ func (s *Node) DialPeers() error {
 				return err
 			}
 			attemts ++
-			log.Errorf(err, "DialPeer")
+			log.Errorf(err, "DialNode")
 			time.Sleep(ATTENTS_INTERVAL*time.Second)
 			continue
 		}
 		s.Client = c
 		break
 	}
-	log.Warnf("Dial peer %s succeed", s.addr)
+	log.Warnf("Dial node %s succeed", s.addr)
+	s.isAlive = true
 	return nil
 }
 
@@ -93,7 +105,34 @@ func (s *Node) SendMsgLeave(request JoinLeaveReq, reply *RpcResp) error {
 }
 
 func (s *Node) SendMsgSignal(request SignalReq, reply *RpcResp) error {
-	log.Infof("SendMsgSignal to %s", s.addr)
+	//log.Infof("SendMsgSignal to %s", s.addr)
 	return s.Client.Call(SIGNAL_SERVICE+SIGNAL, request, reply)
+}
+
+func (s *Node) SendMsgPing(request Ping, reply *Pong) error {
+	//log.Infof("SendMsgPing to %s", s.addr)
+	return s.Client.Call(BROADCAST_SERVICE+PONG, request, reply)
+}
+
+func (s *Node) StartHeartbeat() {
+	go func() {
+		for {
+			ping := Ping{}
+			var pong Pong
+			if err := s.SendMsgPing(ping, &pong);err != nil {
+				log.Errorf(err, "node heartbeat")
+				if err := s.DialNode();err != nil {
+					log.Errorf(err, "dial node")
+					s.isAlive = false
+					break
+				}
+			}
+			time.Sleep(PING_INTERVAL*time.Second)
+		}
+	}()
+}
+
+func (s *Node) IsAlive() bool {
+	return s.isAlive
 }
 

@@ -27,8 +27,6 @@ type Client struct {
 
 	InvalidPeers    map[string]bool    // 已经无效的peerId
 
-	CompressSupported bool             // 是否支持压缩
-
 	LocalNode bool             // 是否本节点
 
 	RpcNodeAddr string       // rpc节点id
@@ -60,7 +58,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 		}
 	} else {
 		// 非本地节点
-		//log.Infof("send data to addr %s", c.RpcNodeAddr)
+		//log.Warnf("send signal to remote node %s to peer %s", c.RpcNodeAddr, c.PeerId)
 		node, ok := rpcservice.GetNode(c.RpcNodeAddr)
 		if ok {
 			req := rpcservice.SignalReq{
@@ -71,6 +69,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 			err := node.SendMsgSignal(req, &resp)
 			if err != nil {
 				log.Warnf("SendMsgSignal " + err.Error())
+				// 节点出现问题
 				return err
 			}
 			if !resp.Success {

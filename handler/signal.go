@@ -14,16 +14,18 @@ type SignalHandler struct {
 func (s *SignalHandler)Handle() {
 	h := hub.GetInstance()
 	//log.Infof("load client Msg %v", s.Msg)
-	_, ok := h.Clients.Load(s.Msg.ToPeerId) //判断节点是否还在线
+	target, ok := h.Clients.Load(s.Msg.ToPeerId) //判断节点是否还在线
 	if ok {
-		log.Infof("found client %s", s.Msg.ToPeerId)
+		//log.Infof("found client %s", s.Msg.ToPeerId)
 		resp := SignalResp{
 			Action: "signal",
 			FromPeerId: s.Cli.PeerId,
 			Data: s.Msg.Data,
 		}
-		log.Infof("send signal msg to %s", s.Msg.ToPeerId)
 		hub.SendJsonToClient(s.Msg.ToPeerId, resp, true)
+		if !target.(*client.Client).LocalNode {
+			log.Warnf("send signal msg from %s to %s on node %s", s.Cli.PeerId, s.Msg.ToPeerId, target.(*client.Client).RpcNodeAddr)
+		}
 	} else {
 		log.Infof("Peer %s not found, ", s.Msg.ToPeerId)
 		resp := SignalResp{

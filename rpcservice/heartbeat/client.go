@@ -25,12 +25,18 @@ type GetPeersReq struct {
 
 type Client struct {
 	*rpc.Client
-	masterAddr string
-	selfAddr string
-	nodeHub *rpcservice.NodeHub
+	masterAddr    string
+	selfAddr      string
+	nodeHub       *rpcservice.NodeHub
+	IsMasterAlive bool
 }
 
 func NewHeartbeatClient(masterAddr, selfAddr string) *Client {
+	if masterAddr == selfAddr {
+		log.Warnf("This is master node")
+	} else {
+		log.Warnf("This is slave node")
+	}
 	client := Client{
 		masterAddr: masterAddr,
 		selfAddr: selfAddr,
@@ -46,7 +52,7 @@ func NewHeartbeatClient(masterAddr, selfAddr string) *Client {
 				//log.Infof("now %d check peer ts %d", now, peer.Ts())
 				if now - peer.Ts() > EXPIRE_TOMEOUT {
 					// peer 过期
-					log.Warnf("peer %s expired, delete", addr)
+					log.Warnf("node %s expired, delete", addr)
 					client.nodeHub.Delete(addr)
 				}
 			}
@@ -73,6 +79,7 @@ func (h *Client) DialHeartbeatService() {
 			continue
 		}
 		h.Client = c
+		h.IsMasterAlive = true
 		break
 	}
 	// 获取master的所有peer节点
@@ -83,6 +90,7 @@ func (h *Client) DialHeartbeatService() {
 	if err := h.sendMsgGetPeers(req, &resp);err != nil {
 		panic(err)
 	}
+	log.Warnf("Got %d peers from master", len(resp.Peers))
 	for _, peer := range resp.Peers {
 		hub.DoRegisterRemoteClient(peer.PeerId, peer.RpcNodeAddr)
 	}
@@ -105,19 +113,28 @@ func (h *Client) StartHeartbeat() {
 			var heartbeatResp PongResp
 			if err := h.sendMsgPing(heartbeatReq, &heartbeatResp);err != nil {
 				log.Errorf(err, "heartbeat")
+				// master失去联系，停止服务
+				h.IsMasterAlive = false
 				h.DialHeartbeatService()
 			}
-			//log.Infof("heartbeatResp %s", heartbeatResp)
+			log.Infof("heartbeatResp %s", heartbeatResp)
+			// 删除死节点
+			for addr, node := range h.nodeHub.GetAll() {
+				if !node.IsAlive() {
+					h.nodeHub.Delete(addr)
+				}
+			}
 			for _, addr := range heartbeatResp.Nodes {
 				p, ok := h.nodeHub.Get(addr)
 				if ok {
 					//log.Infof("update %s ts", p.Addr())
 					p.UpdateTs()
 				} else {
-					//log.Infof("NewPeer %s", addr)
+					log.Infof("NewPeer %s", addr)
 					node := rpcservice.NewPeer(addr)
-					if err := node.DialPeers();err == nil {
+					if err := node.DialNode();err == nil {
 						h.nodeHub.Add(addr, node)
+						node.StartHeartbeat()
 					}
 				}
 			}

@@ -30,3 +30,7 @@ func (b *Service) Leave(request rpcservice.JoinLeaveReq, reply *rpcservice.RpcRe
 	reply.Success = true
 	return nil
 }
+
+func (h *Service) Pong(request rpcservice.Ping, reply *rpcservice.Pong) error {
+	return nil
+}
