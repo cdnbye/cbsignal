@@ -2,6 +2,7 @@ package client
 
 import (
 	"cbsignal/rpcservice"
+	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/lexkong/log"
@@ -53,7 +54,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 		err := wsutil.WriteServerMessage(c.Conn, opCode, data)
 		if err != nil {
 			// handle error
-			log.Warnf("WriteServerMessage " + err.Error())
+			log.Infof("WriteServerMessage " + err.Error())
 			return err
 		}
 	} else {
@@ -68,12 +69,13 @@ func (c *Client)sendData(data []byte, binary bool) error {
 			var resp rpcservice.RpcResp
 			err := node.SendMsgSignal(req, &resp)
 			if err != nil {
-				log.Warnf("SendMsgSignal " + err.Error())
+				log.Warnf("SendMsgSignal to remote failed " + err.Error())
 				// 节点出现问题
 				return err
 			}
 			if !resp.Success {
 				log.Warnf("SendMsgSignal failed reason " + resp.Reason)
+				return fmt.Errorf(resp.Reason)
 			}
 		} else {
 			log.Warnf("node %s not found", c.RpcNodeAddr)

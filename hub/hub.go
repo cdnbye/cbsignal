@@ -3,6 +3,7 @@ package hub
 import (
 	"cbsignal/client"
 	"encoding/json"
+	"fmt"
 	"github.com/lexkong/log"
 	"sync"
 	"sync/atomic"
@@ -35,12 +36,17 @@ func GetInstance() *Hub {
 func DoRegister(client *client.Client) {
 	log.Infof("hub DoRegister %s", client.PeerId)
 	if client.PeerId != "" {
-		h.Clients.Store(client.PeerId, client)
-		atomic.AddInt64(&h.ClientNum, 1)
+		if _, ok := h.Clients.LoadOrStore(client.PeerId, client); !ok {
+			atomic.AddInt64(&h.ClientNum, 1)
+		}
 	}
 }
 
 func DoRegisterRemoteClient(peerId string, addr string) {
+	if peerId == "" || addr == "" {
+		log.Warnf("Invalid peer %s from addr %s", peerId, addr)
+		return
+	}
 	c := &client.Client{
 		LocalNode:    false,
 		Conn:         nil,
@@ -72,16 +78,16 @@ func DoUnregister(peerId string) {
 }
 
 // send json object to a client with peerId
-func SendJsonToClient(peerId string, value interface{}, allowCompress bool) {
+func SendJsonToClient(peerId string, value interface{}) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		log.Error("json.Marshal", err)
-		return
+		return err
 	}
 	cli, ok := h.Clients.Load(peerId)
 	if !ok {
 		//log.Printf("sendJsonToClient error")
-		return
+		return fmt.Errorf("peer %s not found", peerId)
 	}
 	peer := cli.(*client.Client)
 	defer func() {                            // 必须要先声明defer，否则不能捕获到panic异常
@@ -91,19 +97,16 @@ func SendJsonToClient(peerId string, value interface{}, allowCompress bool) {
 	}()
 
 	// 如果开启压缩  TODO
-	if h.CompressEnable && allowCompress {
+	if h.CompressEnable {
 
 
 	} else {
-
 		if err := peer.SendMessage(b); err != nil {
-			log.Warnf("sendMessage", err)
-			if !peer.LocalNode {
-				log.Warnf("node error delete peer %s", peer.PeerId)
-				h.Clients.Delete(peer.PeerId)
-			}
+			//log.Warnf("sendMessage", err)
+			return err
 		}
 	}
+	return nil
 }
 
 func GetClientNum() int64 {

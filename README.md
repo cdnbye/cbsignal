@@ -61,6 +61,12 @@ Status: 200
 }
 ```
 
+### Cluster Mode
+RPC is used to communicate between all nodes. Specify master IP in `config_cluster.yaml`, then  start service:
+```bash
+./admin.sh start cluster config_cluster.yaml
+``` 
+
 ### go语言版的 CDNBye 信令服务器，可用于Web、安卓、iOS SDK等所有CDNBye产品
 #### 编译二进制文件
 请先确保已安装golang开发环境
@@ -123,9 +129,12 @@ Status: 200
 }
 ```
 
-<!--
-### 配置建议
-信令对内存和带宽要求比较高，大概每16GB内存可以容纳20万并发连接数。
--->
+### 集群模式
+节点之间采用RPC进行通信，首先在 `config_cluster.yaml` 中指定master节点的内网IP, 然后启动服务：
+```bash
+./admin.sh start cluster config_cluster.yaml
+``` 
+
+
 
 

@@ -109,10 +109,13 @@ func init()  {
 		panic("Do not use allowList and blockList at the same time")
 	}
 
-	isCluster = viper.GetString("cluster.self_port") != ""
+	isCluster = viper.GetString("cluster.self.port") != ""
 	if isCluster {
-		selfIp = util.GetInternalIP()
-		selfPort = viper.GetString("cluster.self_port")
+		selfIp = viper.GetString("cluster.self.ip")
+		if selfIp == "" {
+			selfIp = util.GetInternalIP()
+		}
+		selfPort = viper.GetString("cluster.self.port")
 		masterIp = viper.GetString("cluster.master.ip")
 		if masterIp == "" {
 			// master node
@@ -239,12 +242,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	//log.Printf("UpgradeHTTP")
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
 	if err != nil {
-		return
-	}
-
-	if isCluster && !heartbeatClient.IsMasterAlive {
-		log.Infof("mater not alive, refuse request")
-		conn.Close()
 		return
 	}
 

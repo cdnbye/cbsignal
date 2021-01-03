@@ -19,6 +19,6 @@ func (s *RejectedHandler)Handle() {
 			Action: "rejected",
 			FromPeerId: s.Cli.PeerId,
 		}
-		hub.SendJsonToClient(s.Msg.ToPeerId, resp, true)
+		hub.SendJsonToClient(s.Msg.ToPeerId, resp)
 	}
 }

@@ -1,6 +1,7 @@
 package heartbeat
 
 import (
+	"cbsignal/client"
 	"cbsignal/hub"
 	"cbsignal/rpcservice"
 	"github.com/lexkong/log"
@@ -21,6 +22,7 @@ type PingReq struct {
 
 type GetPeersReq struct {
 	Addr string
+
 }
 
 type Client struct {
@@ -37,28 +39,12 @@ func NewHeartbeatClient(masterAddr, selfAddr string) *Client {
 	} else {
 		log.Warnf("This is slave node")
 	}
-	client := Client{
+	cli := Client{
 		masterAddr: masterAddr,
 		selfAddr: selfAddr,
 		nodeHub: rpcservice.NewNodeHub(),
 	}
-	// 定时删除过期节点
-	go func() {
-		for {
-			time.Sleep(CHECK_INTERVAL*time.Second)
-			now := time.Now().Unix()
-			//log.Infof("check peer ts")
-			for addr, peer := range client.nodeHub.GetAll() {
-				//log.Infof("now %d check peer ts %d", now, peer.Ts())
-				if now - peer.Ts() > EXPIRE_TOMEOUT {
-					// peer 过期
-					log.Warnf("node %s expired, delete", addr)
-					client.nodeHub.Delete(addr)
-				}
-			}
-		}
-	}()
-	return &client
+	return &cli
 }
 
 func (h *Client) NodeHub() *rpcservice.NodeHub {
@@ -74,7 +60,7 @@ func (h *Client) DialHeartbeatService() {
 		if err != nil {
 			log.Errorf(err, "DialHeartbeatService")
 			// 与master失去联系，清空所有peers
-			hub.ClearAll()
+			//hub.ClearAll()
 			time.Sleep(5*time.Second)
 			continue
 		}
@@ -92,6 +78,10 @@ func (h *Client) DialHeartbeatService() {
 	}
 	log.Warnf("Got %d peers from master", len(resp.Peers))
 	for _, peer := range resp.Peers {
+		if peer.RpcNodeAddr == h.selfAddr {
+			// 本节点的peer忽略
+			continue
+		}
 		hub.DoRegisterRemoteClient(peer.PeerId, peer.RpcNodeAddr)
 	}
 }
@@ -113,7 +103,7 @@ func (h *Client) StartHeartbeat() {
 			var heartbeatResp PongResp
 			if err := h.sendMsgPing(heartbeatReq, &heartbeatResp);err != nil {
 				log.Errorf(err, "heartbeat")
-				// master失去联系，停止服务
+				// master失去联系
 				h.IsMasterAlive = false
 				h.DialHeartbeatService()
 			}
@@ -122,16 +112,15 @@ func (h *Client) StartHeartbeat() {
 			for addr, node := range h.nodeHub.GetAll() {
 				if !node.IsAlive() {
 					h.nodeHub.Delete(addr)
+					// 将节点对应的peers删除
+					go deletePeersInNode(addr)
 				}
 			}
 			for _, addr := range heartbeatResp.Nodes {
-				p, ok := h.nodeHub.Get(addr)
-				if ok {
-					//log.Infof("update %s ts", p.Addr())
-					p.UpdateTs()
-				} else {
-					log.Infof("NewPeer %s", addr)
-					node := rpcservice.NewPeer(addr)
+				_, ok := h.nodeHub.Get(addr)
+				if !ok {
+					log.Infof("New Node %s", addr)
+					node := rpcservice.NewNode(addr)
 					if err := node.DialNode();err == nil {
 						h.nodeHub.Add(addr, node)
 						node.StartHeartbeat()
@@ -141,4 +130,15 @@ func (h *Client) StartHeartbeat() {
 			time.Sleep(PING_INTERVAL*time.Second)
 		}
 	}()
+}
+
+func deletePeersInNode(addr string)  {
+	hub.GetInstance().Clients.Range(func(peerId, peer interface{}) bool {
+		cli := peer.(*client.Client)
+		if cli.RpcNodeAddr == addr {
+			log.Infof("delete cli %s in deleted node %s", cli.PeerId, addr)
+			hub.DoUnregister(cli.PeerId)
+		}
+		return true
+	})
 }

@@ -14,7 +14,7 @@ type SignalHandler struct {
 func (s *SignalHandler)Handle() {
 	h := hub.GetInstance()
 	//log.Infof("load client Msg %v", s.Msg)
-	target, ok := h.Clients.Load(s.Msg.ToPeerId) //判断节点是否还在线
+	_, ok := h.Clients.Load(s.Msg.ToPeerId) //判断节点是否还在线
 	if ok {
 		//log.Infof("found client %s", s.Msg.ToPeerId)
 		resp := SignalResp{
@@ -22,12 +22,19 @@ func (s *SignalHandler)Handle() {
 			FromPeerId: s.Cli.PeerId,
 			Data: s.Msg.Data,
 		}
-		hub.SendJsonToClient(s.Msg.ToPeerId, resp, true)
-		if !target.(*client.Client).LocalNode {
-			log.Warnf("send signal msg from %s to %s on node %s", s.Cli.PeerId, s.Msg.ToPeerId, target.(*client.Client).RpcNodeAddr)
+		if err := hub.SendJsonToClient(s.Msg.ToPeerId, resp); err != nil {
+			log.Warnf("Send signal to peer %s error %s", s.Msg.ToPeerId, err)
+			//notFounResp := SignalResp{
+			//	Action: "signal",
+			//	FromPeerId: s.Msg.ToPeerId,
+			//}
+			//hub.SendJsonToClient(s.Cli.PeerId, notFounResp)
 		}
+		//if !target.(*client.Client).LocalNode {
+		//	log.Warnf("send signal msg from %s to %s on node %s", s.Cli.PeerId, s.Msg.ToPeerId, target.(*client.Client).RpcNodeAddr)
+		//}
 	} else {
-		log.Infof("Peer %s not found, ", s.Msg.ToPeerId)
+		log.Infof("Peer %s not found", s.Msg.ToPeerId)
 		resp := SignalResp{
 			Action: "signal",
 			FromPeerId: s.Msg.ToPeerId,
@@ -35,7 +42,7 @@ func (s *SignalHandler)Handle() {
 		// 发送一次后，同一peerId下次不再发送，节省带宽
 		if !s.Cli.InvalidPeers[s.Msg.ToPeerId] {
 			s.Cli.InvalidPeers[s.Msg.ToPeerId] = true
-			hub.SendJsonToClient(s.Cli.PeerId, resp, true)
+			hub.SendJsonToClient(s.Cli.PeerId, resp)
 		}
 	}
 }

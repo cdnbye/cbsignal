@@ -62,7 +62,7 @@ func (h *Service) Pong(request PingReq, reply *PongResp) error {
 	if ok {
 		p.UpdateTs()
 	} else {
-		h.Nodes[addr] = rpcservice.NewPeer(addr)
+		h.Nodes[addr] = rpcservice.NewNode(addr)
 	}
 
 	for key, _ := range h.Nodes {

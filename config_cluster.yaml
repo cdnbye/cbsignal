@@ -13,9 +13,17 @@ log:
 
 port: :80
 tls:
-  port: :443                # https的端口
+  port: :443                   # https的端口 The port for https
   cert: cert/signaler.pem
   key: cert/signaler.key
+
+cluster:
+  self:
+#    ip: 127.0.0.1              # 本节点的内网IP The internal IP of current node
+    port: :56623               # 本节点的rpc端口，如果和master相同则作为master节点 The RPC port of current node, it will be regarded as master node if this port is same as master
+  master:
+    ip: 127.0.0.1              # master节点的内网IP The internal IP of master node
+    port: :56623               # master节点的rpc端口 The RPC port of master node
 
 # 开启压缩后可以减少信令服务器出带宽   turned on to reduce output bandwidth of the signaling server
 compression:

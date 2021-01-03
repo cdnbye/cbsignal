@@ -25,9 +25,9 @@ func (c *Client) BroadcastMsgJoin(id string)  {
 		Addr: c.selfAddr,
 	}
 	var resp rpcservice.RpcResp
-	for _, peer := range c.nodeHub.GetAll() {
-		if err := peer.SendMsgJoin(req, &resp); err != nil {
-			log.Warnf("peer %s SendMsgJoin failed", peer.Addr())
+	for _, node := range c.nodeHub.GetAll() {
+		if err := node.SendMsgJoin(req, &resp); err != nil {
+			log.Warnf("node %s SendMsgJoin failed", node.Addr())
 		}
 	}
 }
@@ -37,9 +37,9 @@ func (c *Client) BroadcastMsgLeave(id string)  {
 		PeerId: id,
 	}
 	var resp rpcservice.RpcResp
-	for _, peer := range c.nodeHub.GetAll() {
-		if err := peer.SendMsgLeave(req, &resp); err != nil {
-			log.Warnf("peer %s SendMsgLeave failed", peer.Addr())
+	for _, node := range c.nodeHub.GetAll() {
+		if err := node.SendMsgLeave(req, &resp); err != nil {
+			log.Warnf("node %s SendMsgLeave failed", node.Addr())
 		}
 	}
 }

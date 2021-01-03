@@ -62,6 +62,8 @@ function deploy()
 
 function start()
 {
+  chmod +x $FILE_NAME
+
 	deploy
 
 	if [ "`pgrep $SERVER`" != "" ];then

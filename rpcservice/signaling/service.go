@@ -25,7 +25,7 @@ func (b *Service) Signal(request rpcservice.SignalReq, reply *rpcservice.RpcResp
 	if err := json.Unmarshal(request.Data, &req);err != nil {
 		return err
 	}
-	log.Warnf("rpc receive signal from %s to %s action %s", req.FromPeerId, request.ToPeerId, req.Action)
+	log.Infof("rpc receive signal from %s to %s action %s", req.FromPeerId, request.ToPeerId, req.Action)
 	cli, ok := hub.GetClient(req.FromPeerId)
 	if !ok {
 		// 节点不存在

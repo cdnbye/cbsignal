@@ -13,7 +13,7 @@ const (
 	PONG              = ".Pong"
 	SIGNAL_SERVICE    = "SignalService"
 	SIGNAL            = ".Signal"
-	DIAL_MAX_ATTENTS  = 3
+	DIAL_MAX_ATTENTS  = 2
 	ATTENTS_INTERVAL  = 2     // second
 	PING_INTERVAL     = 5
 )
@@ -48,12 +48,12 @@ type Node struct {
 	isAlive bool                 // 是否存活
 }
 
-func NewPeer(addr string) *Node {
-	peer := Node{
+func NewNode(addr string) *Node {
+	node := Node{
 		addr: addr,
 		ts: time.Now().Unix(),
 	}
-	return &peer
+	return &node
 }
 
 func (s *Node) DialNode() error {
@@ -61,7 +61,7 @@ func (s *Node) DialNode() error {
 	for {
 		c, err := rpc.Dial("tcp", s.addr)
 		if err != nil {
-			if attemts > DIAL_MAX_ATTENTS {
+			if attemts >= DIAL_MAX_ATTENTS {
 				return err
 			}
 			attemts ++

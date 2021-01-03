@@ -38,9 +38,9 @@ func (n *NodeHub) Add(addr string, peer *Node) {
 
 func (n *NodeHub) Get(addr string) (*Node, bool) {
 	n.mu.Lock()
-	peer, ok := n.node[addr]
+	node, ok := n.node[addr]
 	n.mu.Unlock()
-	return peer, ok
+	return node, ok
 }
 
 func (n *NodeHub) GetAll() map[string]*Node {
