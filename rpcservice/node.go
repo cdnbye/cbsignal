@@ -3,6 +3,7 @@ package rpcservice
 import (
 	"github.com/lexkong/log"
 	"net/rpc"
+	"sync"
 	"time"
 )
 
@@ -42,6 +43,7 @@ type Pong struct {
 }
 
 type Node struct {
+	sync.Mutex
 	*rpc.Client
 	addr string         // ip:port
 	ts int64
@@ -73,7 +75,9 @@ func (s *Node) DialNode() error {
 		break
 	}
 	log.Warnf("Dial node %s succeed", s.addr)
+	s.Lock()
 	s.isAlive = true
+	s.Unlock()
 	return nil
 }
 
@@ -123,7 +127,9 @@ func (s *Node) StartHeartbeat() {
 				log.Errorf(err, "node heartbeat")
 				if err := s.DialNode();err != nil {
 					log.Errorf(err, "dial node")
+					s.Lock()
 					s.isAlive = false
+					s.Unlock()
 					break
 				}
 			}

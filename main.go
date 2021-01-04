@@ -141,6 +141,7 @@ func init()  {
 	compressionLevel = viper.GetInt("compression.level")
 	compressionActivationRatio = viper.GetInt("compression.activationRatio")
 
+	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
 }
 
 func main() {
@@ -158,15 +159,6 @@ func main() {
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 		panic(err)
 	}
-
-	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
-
-	http.HandleFunc("/ws", wsHandler)
-	http.HandleFunc("/wss", wsHandler)
-	http.HandleFunc("/", wsHandler)
-	http.HandleFunc("/count", handler.CountHandler())
-	http.HandleFunc("/version", handler.VersionHandler(version))
-	http.HandleFunc("/info", handler.StatsHandler(version, compressionEnabled))
 
 	if signalPort != "" {
 		go func() {
@@ -208,7 +200,7 @@ func main() {
 				go rpc.ServeConn(conn)
 			}
 		}()
-		time.Sleep(2*time.Second)
+		time.Sleep(6*time.Second)
 
 		masterAddr = masterIp + masterPort
 		selfAddr = selfIp + selfPort
@@ -229,12 +221,17 @@ func main() {
 		}
 	}
 
+	http.HandleFunc("/ws", wsHandler)
+	http.HandleFunc("/wss", wsHandler)
+	http.HandleFunc("/", wsHandler)
+	http.HandleFunc("/count", handler.CountHandler())
+	http.HandleFunc("/version", handler.VersionHandler(version))
+	http.HandleFunc("/info", handler.StatsHandler(version, compressionEnabled))
+
 	<-intrChan
 
 	log.Info("Shutting down server...")
 }
-
-
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -270,13 +267,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := &client.Client{
-		LocalNode:    true,
-		Conn:         conn,
-		PeerId:       id,
-		InvalidPeers: make(map[string]bool),
-		RpcNodeAddr: selfAddr,
-	}
+	c := client.NewPeerClient(id, conn, true, selfAddr)
 	hub.DoRegister(c)
 	if isCluster {
 		broadcastClient.BroadcastMsgJoin(id)

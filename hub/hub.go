@@ -47,13 +47,7 @@ func DoRegisterRemoteClient(peerId string, addr string) {
 		log.Warnf("Invalid peer %s from addr %s", peerId, addr)
 		return
 	}
-	c := &client.Client{
-		LocalNode:    false,
-		Conn:         nil,
-		PeerId:       peerId,
-		InvalidPeers: make(map[string]bool),
-		RpcNodeAddr:  addr,
-	}
+	c := client.NewPeerClient(peerId, nil, false, addr)
 	DoRegister(c)
 }
 

@@ -26,11 +26,18 @@ type Client struct {
 
 	PeerId          string              //唯一标识
 
-	InvalidPeers    map[string]bool    // 已经无效的peerId
-
 	LocalNode bool             // 是否本节点
 
 	RpcNodeAddr string       // rpc节点id
+}
+
+func NewPeerClient(peerId string, conn net.Conn, localNode bool, rpcNodeAddr string) *Client {
+	return &Client{
+		Conn:        conn,
+		PeerId:      peerId,
+		LocalNode:   localNode,
+		RpcNodeAddr: rpcNodeAddr,
+	}
 }
 
 func (c *Client)SendMessage(msg []byte) error {
@@ -62,6 +69,9 @@ func (c *Client)sendData(data []byte, binary bool) error {
 		//log.Warnf("send signal to remote node %s to peer %s", c.RpcNodeAddr, c.PeerId)
 		node, ok := rpcservice.GetNode(c.RpcNodeAddr)
 		if ok {
+			if !node.IsAlive() {
+				return fmt.Errorf("node %s is not alive when send signal", node.Addr())
+			}
 			req := rpcservice.SignalReq{
 				ToPeerId: c.PeerId,
 				Data:     data,

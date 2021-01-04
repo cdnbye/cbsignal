@@ -39,11 +39,7 @@ func (s *SignalHandler)Handle() {
 			Action: "signal",
 			FromPeerId: s.Msg.ToPeerId,
 		}
-		// 发送一次后，同一peerId下次不再发送，节省带宽
-		if !s.Cli.InvalidPeers[s.Msg.ToPeerId] {
-			s.Cli.InvalidPeers[s.Msg.ToPeerId] = true
-			hub.SendJsonToClient(s.Cli.PeerId, resp)
-		}
+		hub.SendJsonToClient(s.Cli.PeerId, resp)
 	}
 }
 

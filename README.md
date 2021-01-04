@@ -14,7 +14,7 @@ Upload binary file, admin.sh and config.yaml to server, create `cert` directory 
 ```bash
 chmod +x admin.sh
 chmod +x cbsignal
-./admin.sh start
+sudo ./admin.sh start
 ```
 
 ### Set up Allow List
@@ -64,7 +64,7 @@ Status: 200
 ### Cluster Mode
 RPC is used to communicate between all nodes. Specify master IP in `config_cluster.yaml`, then  start service:
 ```bash
-./admin.sh start cluster config_cluster.yaml
+sudo ./admin.sh start cluster config_cluster.yaml
 ``` 
 
 ### go语言版的 CDNBye 信令服务器，可用于Web、安卓、iOS SDK等所有CDNBye产品
@@ -83,7 +83,7 @@ make
 chmod +x admin.sh
 chmod +x cbsignal
 echo -17 > /proc/$(pidof cbsignal)/oom_adj     # 防止进程被OOM killer杀死
-./admin.sh start
+sudo ./admin.sh start
 ```
 
 ### 设置域名白名单
@@ -132,7 +132,7 @@ Status: 200
 ### 集群模式
 节点之间采用RPC进行通信，首先在 `config_cluster.yaml` 中指定master节点的内网IP, 然后启动服务：
 ```bash
-./admin.sh start cluster config_cluster.yaml
+sudo ./admin.sh start cluster config_cluster.yaml
 ``` 
 
 

@@ -26,6 +26,10 @@ func (c *Client) BroadcastMsgJoin(id string)  {
 	}
 	var resp rpcservice.RpcResp
 	for _, node := range c.nodeHub.GetAll() {
+		if !node.IsAlive() {
+			log.Warnf("node %s is not alive when broadcast", node.Addr())
+			continue
+		}
 		if err := node.SendMsgJoin(req, &resp); err != nil {
 			log.Warnf("node %s SendMsgJoin failed", node.Addr())
 		}
@@ -38,6 +42,10 @@ func (c *Client) BroadcastMsgLeave(id string)  {
 	}
 	var resp rpcservice.RpcResp
 	for _, node := range c.nodeHub.GetAll() {
+		if !node.IsAlive() {
+			log.Warnf("node %s is not alive when broadcast", node.Addr())
+			continue
+		}
 		if err := node.SendMsgLeave(req, &resp); err != nil {
 			log.Warnf("node %s SendMsgLeave failed", node.Addr())
 		}

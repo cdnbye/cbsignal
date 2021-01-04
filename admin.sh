@@ -49,7 +49,6 @@ WantedBy=multi-user.target" > ./$SERVICE
 
 function deploy()
 {
-  ulimit -n 1000000
   if [ "$SERVER" != "$FILE_NAME" ]; then
     sudo cp $FILE_NAME $SERVER
   fi
@@ -63,6 +62,10 @@ function deploy()
 function start()
 {
   chmod +x $FILE_NAME
+
+  sudo sysctl -w fs.file-max=6000000
+  sudo sysctl -w fs.nr_open=6000000
+  ulimit -n 6000000
 
 	deploy
 
@@ -101,6 +104,7 @@ function stop()
 		  echo "$SERVER stop failed"
 		  exit 1
 	  fi
+	  rm -f $SERVER
 	  echo "$SERVER stop succeed"
 	else
 	  echo "$SERVER is not running"
