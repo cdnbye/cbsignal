@@ -4,7 +4,7 @@ FILE_NAME="cbsignal"
 if [ -n "$2" ]; then
   SERVER=$2
 else
-  SERVER=$FILE_NAME
+  SERVER="signald"
 fi
 
 SERVICE="$SERVER.service"
@@ -80,6 +80,7 @@ function start()
 	# check status
 	if [ "`pgrep $SERVER`" == "" ];then
 		echo "$SERVER start failed"
+		rm -f $SERVER
 		exit 1
 	fi
 
