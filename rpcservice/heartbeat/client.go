@@ -105,6 +105,8 @@ func (h *Client) StartHeartbeat() {
 				log.Errorf(err, "heartbeat")
 				// master失去联系
 				h.IsMasterAlive = false
+				// 将master节点对应的peers删除
+				go deletePeersInNode(h.masterAddr)
 				h.DialHeartbeatService()
 			}
 			log.Infof("heartbeatResp %s", heartbeatResp)
@@ -131,6 +133,8 @@ func (h *Client) StartHeartbeat() {
 		}
 	}()
 }
+
+
 
 func deletePeersInNode(addr string)  {
 	hub.GetInstance().Clients.Range(func(peerId, peer interface{}) bool {
