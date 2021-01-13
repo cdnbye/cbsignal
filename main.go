@@ -283,24 +283,53 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				broadcastClient.BroadcastMsgLeave(id)
 			}
 		}()
-
+		msg := make([]wsutil.Message, 0, 4)
 		for {
-			msg, _, err := wsutil.ReadClientData(conn)
+			msg, err = wsutil.ReadClientMessage(conn, msg[:0])
 			if err != nil {
-				// handle error
-				//log.Printf("ReadClientData " + err.Error())
+				log.Infof("read message error: %v", err)
 				break
 			}
-			//log.Infof("ReadClientData from " + id)
-			msg = bytes.TrimSpace(bytes.Replace(msg, newline, space, -1))
-			hdr, err := handler.NewHandler(msg, c)
-			if err != nil {
-				// 心跳包
-				log.Infof("NewHandler " + err.Error())
-			} else {
-				hdr.Handle()
+			for _, m := range msg {
+				// ping
+				if m.OpCode.IsControl() {
+					err := wsutil.HandleClientControlMessage(conn, m)
+					if err != nil {
+						log.Infof("handle control error: %v", err)
+					}
+					continue
+				}
+				data := bytes.TrimSpace(bytes.Replace(m.Payload, newline, space, -1))
+				hdr, err := handler.NewHandler(data, c)
+				if err != nil {
+					// 心跳包
+					log.Infof("NewHandler " + err.Error())
+				} else {
+					hdr.Handle()
+				}
 			}
 		}
+
+		//for {
+		//	msg, _, err := wsutil.ReadClientData(conn)
+		//	if err != nil {
+		//		// handle error
+		//		//log.Printf("ReadClientData " + err.Error())
+		//		break
+		//	}
+		//
+
+		//
+		//	//log.Infof("ReadClientData from " + id)
+		//	msg = bytes.TrimSpace(bytes.Replace(msg, newline, space, -1))
+		//	hdr, err := handler.NewHandler(msg, c)
+		//	if err != nil {
+		//		// 心跳包
+		//		log.Infof("NewHandler " + err.Error())
+		//	} else {
+		//		hdr.Handle()
+		//	}
+		//}
 	}()
 }
 
