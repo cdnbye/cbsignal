@@ -13,12 +13,14 @@ type SignalMsg struct {
 	Action   string      `json:"action"`
 	ToPeerId string      `json:"to_peer_id"`
 	Data     interface{} `json:"data"`
+	Reason string      `json:"reason"`
 }
 
 type SignalResp struct {
 	Action string              `json:"action"`
 	FromPeerId string          `json:"from_peer_id,omitempty"`
 	Data interface{}           `json:"data,omitempty"`
+	Reason string              `json:"reason,omitempty"`
 }
 
 func NewHandler(message []byte, cli *client.Client) (Handler, error) {

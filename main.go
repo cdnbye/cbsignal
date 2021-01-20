@@ -309,27 +309,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-
-		//for {
-		//	msg, _, err := wsutil.ReadClientData(conn)
-		//	if err != nil {
-		//		// handle error
-		//		//log.Printf("ReadClientData " + err.Error())
-		//		break
-		//	}
-		//
-
-		//
-		//	//log.Infof("ReadClientData from " + id)
-		//	msg = bytes.TrimSpace(bytes.Replace(msg, newline, space, -1))
-		//	hdr, err := handler.NewHandler(msg, c)
-		//	if err != nil {
-		//		// 心跳包
-		//		log.Infof("NewHandler " + err.Error())
-		//	} else {
-		//		hdr.Handle()
-		//	}
-		//}
 	}()
 }
 

@@ -1,6 +1,8 @@
 package handler
 
-import "cbsignal/client"
+import (
+	"cbsignal/client"
+)
 
 type ExceptionHandler struct {
 
@@ -9,5 +11,4 @@ type ExceptionHandler struct {
 }
 
 func (s *ExceptionHandler)Handle() {
-
 }

@@ -6,7 +6,6 @@ import (
 )
 
 type RejectedHandler struct {
-
 	Msg   *SignalMsg
 	Cli   *client.Client
 }
@@ -18,6 +17,7 @@ func (s *RejectedHandler)Handle() {
 		resp := SignalResp{
 			Action: "rejected",
 			FromPeerId: s.Cli.PeerId,
+			Reason: s.Msg.Reason,
 		}
 		hub.SendJsonToClient(s.Msg.ToPeerId, resp)
 	}
