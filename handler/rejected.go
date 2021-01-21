@@ -5,17 +5,17 @@ import (
 	"cbsignal/hub"
 )
 
-type RejectedHandler struct {
+type RejectHandler struct {
 	Msg   *SignalMsg
 	Cli   *client.Client
 }
 
-func (s *RejectedHandler)Handle() {
+func (s *RejectHandler)Handle() {
 	h := hub.GetInstance()
 	_, ok := h.Clients.Load(s.Msg.ToPeerId) //判断节点是否还在线
 	if ok {
 		resp := SignalResp{
-			Action: "rejected",
+			Action: "reject",
 			FromPeerId: s.Cli.PeerId,
 			Reason: s.Msg.Reason,
 		}
