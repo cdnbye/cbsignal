@@ -1,6 +1,8 @@
 package rpcservice
 
 import (
+	"errors"
+	"fmt"
 	"github.com/lexkong/log"
 	"net/rpc"
 	"sync"
@@ -98,22 +100,34 @@ func (s *Node) Ts() int64 {
 }
 
 func (s *Node) SendMsgJoin(request JoinLeaveReq, reply *RpcResp) error {
+	if !s.isAlive {
+		return errors.New(fmt.Sprintf("node %s is not alive", s.addr))
+	}
 	log.Infof("SendMsgJoin to %s", s.addr)
 	return s.Client.Call(BROADCAST_SERVICE+JOIN, request, reply)
 }
 
 func (s *Node) SendMsgLeave(request JoinLeaveReq, reply *RpcResp) error {
+	if !s.isAlive {
+		return errors.New(fmt.Sprintf("node %s is not alive", s.addr))
+	}
 	log.Infof("SendMsgLeave to %s", s.addr)
 	request.Addr = s.addr
 	return s.Client.Call(BROADCAST_SERVICE+LEAVE, request, reply)
 }
 
 func (s *Node) SendMsgSignal(request SignalReq, reply *RpcResp) error {
+	if !s.isAlive {
+		return errors.New(fmt.Sprintf("node %s is not alive", s.addr))
+	}
 	//log.Infof("SendMsgSignal to %s", s.addr)
 	return s.Client.Call(SIGNAL_SERVICE+SIGNAL, request, reply)
 }
 
 func (s *Node) SendMsgPing(request Ping, reply *Pong) error {
+	if !s.isAlive {
+		return errors.New(fmt.Sprintf("node %s is not alive", s.addr))
+	}
 	//log.Infof("SendMsgPing to %s", s.addr)
 	return s.Client.Call(BROADCAST_SERVICE+PONG, request, reply)
 }
@@ -125,11 +139,11 @@ func (s *Node) StartHeartbeat() {
 			var pong Pong
 			if err := s.SendMsgPing(ping, &pong);err != nil {
 				log.Errorf(err, "node heartbeat")
+				s.Lock()
+				s.isAlive = false
+				s.Unlock()
 				if err := s.DialNode();err != nil {
 					log.Errorf(err, "dial node")
-					s.Lock()
-					s.isAlive = false
-					s.Unlock()
 					break
 				}
 			}
