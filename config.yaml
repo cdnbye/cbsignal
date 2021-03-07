@@ -16,6 +16,10 @@ tls:
   cert: cert/signaler.pem
   key: cert/signaler.key
 
+ratelimit:
+  enable: false
+  max_rate: 500                # max requests per second
+
 # 开启压缩后可以减少信令服务器出带宽   turned on to reduce output bandwidth of the signaling server
 compression:
   enable: false

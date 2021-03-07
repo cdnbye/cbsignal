@@ -24,6 +24,10 @@ cluster:
     ip: 127.0.0.1              # master节点的内网IP The internal IP of master node
     port: :56623               # master节点的rpc端口 The RPC port of master node
 
+ratelimit:
+  enable: false
+  max_rate: 500                # max requests per second
+
 # 开启压缩后可以减少信令服务器出带宽   turned on to reduce output bandwidth of the signaling server
 compression:
   enable: false

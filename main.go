@@ -9,6 +9,7 @@ import (
 	"cbsignal/rpcservice/heartbeat"
 	"cbsignal/rpcservice/signaling"
 	"cbsignal/util"
+	"cbsignal/util/ratelimit"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -52,6 +53,10 @@ var (
 	compressionEnabled bool
 	compressionLevel int
 	compressionActivationRatio int
+
+	limitEnabled bool
+	limitRate    int64
+	limiter      *ratelimit.Bucket
 
 	broadcastClient *broadcast.Client
 	heartbeatClient *heartbeat.Client
@@ -140,6 +145,8 @@ func init()  {
 	compressionEnabled = viper.GetBool("compression.enable")
 	compressionLevel = viper.GetInt("compression.level")
 	compressionActivationRatio = viper.GetInt("compression.activationRatio")
+	limitEnabled = viper.GetBool("ratelimit.enable")
+	limitRate = viper.GetInt64("ratelimit.max_rate")
 
 	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
 }
@@ -158,6 +165,12 @@ func main() {
 	rLimit.Cur = rLimit.Max
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit); err != nil {
 		panic(err)
+	}
+
+	// rate limit
+	if limitEnabled {
+		log.Warnf("Init ratelimit with rate %d", limitRate)
+		limiter = ratelimit.NewBucketWithQuantum(time.Second, limitRate, limitRate)
 	}
 
 	if signalPort != "" {
@@ -242,22 +255,31 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	origin := r.Header.Get("Origin")
-	if origin != "" {
-		domain := util.GetDomain(origin)
-		log.Debugf("domain: %s", domain)
-		if useAllowList && !allowMap[domain] {
-			log.Infof("domian %s is out of allowList", domain)
-			//wsutil.WriteServerMessage(conn, ws.OpClose, nil)
+	if limitEnabled {
+		if limiter.TakeAvailable(1) == 0 {
+			log.Warnf("reach rate limit %d", limiter.Capacity())
 			conn.Close()
 			return
-		} else if useBlockList && blockMap[domain] {
-			log.Infof("domian %s is in blockList", domain)
-			//wsutil.WriteServerMessage(conn, ws.OpClose, nil)
-			conn.Close()
-			return
+		} else {
+			log.Infof("rate limit remaining %d capacity %d", limiter.Available(), limiter.Capacity())
 		}
 	}
+
+	// 性能问题先关闭
+	//origin := r.Header.Get("Origin")
+	//if origin != "" {
+	//	domain := util.GetDomain(origin)
+	//	log.Debugf("domain: %s", domain)
+	//	if useAllowList && !allowMap[domain] {
+	//		log.Infof("domian %s is out of allowList", domain)
+	//		conn.Close()
+	//		return
+	//	} else if useBlockList && blockMap[domain] {
+	//		log.Infof("domian %s is in blockList", domain)
+	//		conn.Close()
+	//		return
+	//	}
+	//}
 
 	r.ParseForm()
 	id := r.Form.Get("id")
