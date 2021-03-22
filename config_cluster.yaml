@@ -25,8 +25,8 @@ cluster:
     port: :56623               # master节点的rpc端口 The RPC port of master node
 
 ratelimit:
-  enable: false
-  max_rate: 500                # max requests per second
+  enable: true
+  max_rate: 200                # max requests per second
 
 # 开启压缩后可以减少信令服务器出带宽   turned on to reduce output bandwidth of the signaling server
 compression:
@@ -34,13 +34,6 @@ compression:
   level: 2                     # -1: DefaultCompression   1: BestSpeed  <---> 9: BestCompression
   activationRatio: 100         # 0 <---> 100   (%)
 
-# 允许连接的域名白名单（不包含端口）   Whitelist of domain names allowed to connect（Port not included）
-allow_list:
-# - "localhost"
-
-# 不允许连接的域名黑名单（不包含端口）   Domain name blacklist not allowed to connect（Port not included）
-block_list:
-# - "localhost"
 
 
 

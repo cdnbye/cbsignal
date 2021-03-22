@@ -10,6 +10,9 @@ import (
 	"cbsignal/rpcservice/signaling"
 	"cbsignal/util"
 	"cbsignal/util/ratelimit"
+	"crypto/hmac"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -21,6 +24,7 @@ import (
 	"net/rpc"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -30,11 +34,6 @@ var (
 	cfg = pflag.StringP("config", "c", "", "Config file path.")
 	newline = []byte{'\n'}
 	space   = []byte{' '}
-
-	allowMap = make(map[string]bool)            // allow list of domain
-	useAllowList = false
-	blockMap = make(map[string]bool)            // block list of domain
-	useBlockList = false
 
 	masterIp string
 	masterPort string
@@ -60,6 +59,10 @@ var (
 
 	broadcastClient *broadcast.Client
 	heartbeatClient *heartbeat.Client
+
+	securityEnabled bool
+	maxTimeStampAge int64
+	securityToken string
 )
 
 func init()  {
@@ -95,25 +98,6 @@ func init()  {
 		fmt.Errorf("Initialize logger %s", err)
 	}
 
-	// Initialize allow list and block list
-	allowList := viper.GetStringSlice("allow_list")
-	if len(allowList) > 0 {
-		useAllowList = true
-		for _, v := range allowList {
-			allowMap[v] = true
-		}
-	}
-	blockList := viper.GetStringSlice("block_list")
-	if len(blockList) > 0 {
-		useBlockList = true
-		for _, v := range blockList{
-			blockMap[v] = true
-		}
-	}
-	if useBlockList && useAllowList {
-		panic("Do not use allowList and blockList at the same time")
-	}
-
 	isCluster = viper.GetString("cluster.self.port") != ""
 	if isCluster {
 		selfIp = viper.GetString("cluster.self.ip")
@@ -147,6 +131,9 @@ func init()  {
 	compressionActivationRatio = viper.GetInt("compression.activationRatio")
 	limitEnabled = viper.GetBool("ratelimit.enable")
 	limitRate = viper.GetInt64("ratelimit.max_rate")
+	securityEnabled = viper.GetBool("security.enable")
+	maxTimeStampAge = viper.GetInt64("security.maxTimeStampAge")
+	securityToken = viper.GetString("security.token")
 
 	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
 }
@@ -171,6 +158,16 @@ func main() {
 	if limitEnabled {
 		log.Warnf("Init ratelimit with rate %d", limitRate)
 		limiter = ratelimit.NewBucketWithQuantum(time.Second, limitRate, limitRate)
+	}
+
+	if securityEnabled {
+		if maxTimeStampAge == 0 || securityToken == "" {
+			panic("maxTimeStampAge or token is empty when security on")
+		}
+		if len(securityToken) > 8 {
+			panic("security token is larger than 8")
+		}
+		log.Warnf("security on\nmaxTimeStampAge %d\ntoken %s", maxTimeStampAge, securityToken)
 	}
 
 	if signalPort != "" {
@@ -255,6 +252,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 限流
 	if limitEnabled {
 		if limiter.TakeAvailable(1) == 0 {
 			log.Warnf("reach rate limit %d", limiter.Capacity())
@@ -265,28 +263,38 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 性能问题先关闭
-	//origin := r.Header.Get("Origin")
-	//if origin != "" {
-	//	domain := util.GetDomain(origin)
-	//	log.Debugf("domain: %s", domain)
-	//	if useAllowList && !allowMap[domain] {
-	//		log.Infof("domian %s is out of allowList", domain)
-	//		conn.Close()
-	//		return
-	//	} else if useBlockList && blockMap[domain] {
-	//		log.Infof("domian %s is in blockList", domain)
-	//		conn.Close()
-	//		return
-	//	}
-	//}
-
 	r.ParseForm()
 	id := r.Form.Get("id")
 	//log.Printf("id %s", id)
 	if id == "" {
 		conn.Close()
 		return
+	}
+
+	// 校验
+	if securityEnabled {
+		now := time.Now().Unix()
+		tsStr := r.Form.Get("ts")
+		if ts, err := strconv.ParseInt(tsStr, 10, 64); err != nil {
+			log.Warnf("ts ParseInt", err)
+			conn.Close()
+			return
+		} else {
+			if now - ts > maxTimeStampAge {
+				log.Warnf("ts expired for %d", now - ts)
+				conn.Close()
+				return
+			}
+			hash := r.Form.Get("token")
+			hm := hmac.New(md5.New, []byte(securityToken))
+			hm.Write([]byte(tsStr))
+			realHash := hex.EncodeToString(hm.Sum(nil))
+			if hash != realHash {
+				log.Warnf("client token %s not match %s", hash, realHash)
+				conn.Close()
+				return
+			}
+		}
 	}
 
 	c := client.NewPeerClient(id, conn, true, selfAddr)
