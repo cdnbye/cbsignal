@@ -9,7 +9,7 @@ import (
 
 type SignalInfo struct {
 	Version string `json:"version"`
-	CurrentConnections int64 `json:"current_connections"`
+	CurrentConnections int `json:"current_connections"`
 	CompressionEnabled bool `json:"compression_enabled"`
 }
 

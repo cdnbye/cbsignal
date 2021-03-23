@@ -2,19 +2,16 @@ package hub
 
 import (
 	"cbsignal/client"
+	"cbsignal/util/cmap"
 	"encoding/json"
 	"fmt"
 	"github.com/lexkong/log"
-	"sync"
-	"sync/atomic"
 )
 
 var h *Hub
 type Hub struct {
 
-	Clients sync.Map
-
-	ClientNum int64            //count of client
+	Clients cmap.ConcurrentMap
 
 	CompressEnable bool
 	CompressLevel int
@@ -23,6 +20,7 @@ type Hub struct {
 
 func Init(compressEnable bool, compressLevel int, compressRatio int) {
 	h = &Hub{
+		Clients: cmap.New(),
 		CompressEnable: compressEnable,
 		CompressLevel: compressLevel,
 		CompressRatio: compressRatio,
@@ -33,12 +31,14 @@ func GetInstance() *Hub {
 	return h
 }
 
+func GetClientNum() int {
+	return h.Clients.Count()
+}
+
 func DoRegister(client *client.Client) {
 	log.Infof("hub DoRegister %s", client.PeerId)
 	if client.PeerId != "" {
-		if _, ok := h.Clients.LoadOrStore(client.PeerId, client); !ok {
-			atomic.AddInt64(&h.ClientNum, 1)
-		}
+		h.Clients.Set(client.PeerId, client)
 	}
 }
 
@@ -52,7 +52,7 @@ func DoRegisterRemoteClient(peerId string, addr string) {
 }
 
 func GetClient(peerId string) (*client.Client, bool) {
-	cli, ok := h.Clients.Load(peerId)
+	cli, ok := h.Clients.Get(peerId)
 	if !ok {
 		return nil, false
 	}
@@ -64,10 +64,8 @@ func DoUnregister(peerId string) {
 	if peerId == "" {
 		return
 	}
-	_, ok := h.Clients.Load(peerId)
-	if ok {
-		h.Clients.Delete(peerId)
-		atomic.AddInt64(&h.ClientNum, -1)
+	if h.Clients.Has(peerId) {
+		h.Clients.Remove(peerId)
 	}
 }
 
@@ -78,7 +76,7 @@ func SendJsonToClient(peerId string, value interface{}) error {
 		log.Error("json.Marshal", err)
 		return err
 	}
-	cli, ok := h.Clients.Load(peerId)
+	cli, ok := h.Clients.Get(peerId)
 	if !ok {
 		//log.Printf("sendJsonToClient error")
 		return fmt.Errorf("peer %s not found", peerId)
@@ -103,15 +101,8 @@ func SendJsonToClient(peerId string, value interface{}) error {
 	return nil
 }
 
-func GetClientNum() int64 {
-	return h.ClientNum
-}
-
 func ClearAll()  {
-	h.Clients.Range(func(key, value interface{}) bool {
-		h.Clients.Delete(key)
-		return true
-	})
+	h.Clients.Clear()
 }
 
 

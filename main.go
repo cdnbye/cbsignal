@@ -281,7 +281,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			if now - ts > maxTimeStampAge {
-				log.Warnf("ts expired for %d", now - ts)
+				log.Warnf("ts expired for %d origin %s", now - ts, r.Host)
 				conn.Close()
 				return
 			}
@@ -290,7 +290,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			hm.Write([]byte(tsStr))
 			realHash := hex.EncodeToString(hm.Sum(nil))
 			if hash != realHash {
-				log.Warnf("client token %s not match %s", hash, realHash)
+				log.Warnf("client token %s not match %s origin %s", hash, realHash, r.Host)
 				conn.Close()
 				return
 			}

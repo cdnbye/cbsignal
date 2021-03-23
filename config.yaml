@@ -28,8 +28,8 @@ compression:
 
 security:
   enable: false
-  maxTimeStampAge: 120
-  token: %!$y&2
+  maxTimeStampAge: 3600
+  token: "%!$y&2"
 
 
 

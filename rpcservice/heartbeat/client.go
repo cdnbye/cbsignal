@@ -137,12 +137,21 @@ func (h *Client) StartHeartbeat() {
 
 
 func deletePeersInNode(addr string)  {
-	hub.GetInstance().Clients.Range(func(peerId, peer interface{}) bool {
-		cli := peer.(*client.Client)
+	//hub.GetInstance().Clients.Range(func(peerId, peer interface{}) bool {
+	//	cli := peer.(*client.Client)
+	//	if cli.RpcNodeAddr == addr {
+	//		log.Infof("delete cli %s in deleted node %s", cli.PeerId, addr)
+	//		hub.DoUnregister(cli.PeerId)
+	//	}
+	//	return true
+	//})
+
+	for item := range hub.GetInstance().Clients.IterBuffered() {
+		val := item.Val
+		cli := val.(*client.Client)
 		if cli.RpcNodeAddr == addr {
 			log.Infof("delete cli %s in deleted node %s", cli.PeerId, addr)
 			hub.DoUnregister(cli.PeerId)
 		}
-		return true
-	})
+	}
 }

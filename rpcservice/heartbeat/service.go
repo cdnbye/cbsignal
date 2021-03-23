@@ -75,15 +75,23 @@ func (h *Service) Pong(request PingReq, reply *PongResp) error {
 
 func (h *Service)Peers(request GetPeersReq, reply *PeersResp) error {
 	var peers []*Peer
-	hub.GetInstance().Clients.Range(func(key, value interface{}) bool {
-		cli := value.(*client.Client)
+	//hub.GetInstance().Clients.Range(func(key, value interface{}) bool {
+	//	cli := value.(*client.Client)
+	//	peer := Peer{
+	//		PeerId:      cli.PeerId,
+	//		RpcNodeAddr: cli.RpcNodeAddr,
+	//	}
+	//	peers = append(peers, &peer)
+	//	return true
+	//})
+	for item := range hub.GetInstance().Clients.IterBuffered() {
+		cli := item.Val.(*client.Client)
 		peer := Peer{
 			PeerId:      cli.PeerId,
 			RpcNodeAddr: cli.RpcNodeAddr,
 		}
 		peers = append(peers, &peer)
-		return true
-	})
+	}
 	log.Infof("send %d peers to %s", len(peers), request.Addr)
 	reply.Peers = peers
 	return nil
