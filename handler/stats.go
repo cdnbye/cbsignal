@@ -5,12 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 )
 
 type SignalInfo struct {
 	Version string `json:"version"`
 	CurrentConnections int `json:"current_connections"`
-	CompressionEnabled bool `json:"compression_enabled"`
+	CompressionEnabled bool `json:"compression_enabled,omitempty"`
+	RateLimit          int64  `json:"rate_limit,omitempty"`
+	SecurityEnabled    bool `json:"security_enabled,omitempty"`
+	ClusterMode        bool `json:"cluster_mode,omitempty"`
+	NumGoroutine       int  `json:"num_goroutine"`
+	NumPerMap          []int `json:"num_per_map"`
 }
 
 type Resp struct {
@@ -18,15 +24,16 @@ type Resp struct {
 	Data *SignalInfo `json:"data"`
 }
 
-func StatsHandler(version string, compressionEnabled bool) http.HandlerFunc {
+func StatsHandler(info SignalInfo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//fmt.Printf("URL: %s\n", r.URL.String())
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		info := SignalInfo{
-			Version:            version,
-			CurrentConnections: hub.GetClientNum(),
-			CompressionEnabled: compressionEnabled,
+		info.NumGoroutine = runtime.NumGoroutine()
+		info.NumPerMap = hub.GetClientNumPerMap()
+		info.CurrentConnections = 0
+		for _, count := range info.NumPerMap {
+			info.CurrentConnections += count
 		}
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		resp := Resp{
 			Ret:  0,
 			Data: &info,

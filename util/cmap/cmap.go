@@ -102,6 +102,35 @@ func (m ConcurrentMap) Count() int {
 	return count
 }
 
+func (m ConcurrentMap) CountNoLock() int {
+	count := 0
+	for i := 0; i < SHARD_COUNT; i++ {
+		shard := m[i]
+		count += len(shard.items)
+	}
+	return count
+}
+
+func (m ConcurrentMap) CountPerMap() []int {
+	var count = make([]int, SHARD_COUNT)
+	for i := 0; i < SHARD_COUNT; i++ {
+		shard := m[i]
+		shard.RLock()
+		count[i] = len(shard.items)
+		shard.RUnlock()
+	}
+	return count
+}
+
+func (m ConcurrentMap) CountPerMapNoLock() []int {
+	var count = make([]int, SHARD_COUNT)
+	for i := 0; i < SHARD_COUNT; i++ {
+		shard := m[i]
+		count[i] = len(shard.items)
+	}
+	return count
+}
+
 // Looks up an item under specified key
 func (m ConcurrentMap) Has(key string) bool {
 	// Get shard

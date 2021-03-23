@@ -32,7 +32,11 @@ func GetInstance() *Hub {
 }
 
 func GetClientNum() int {
-	return h.Clients.Count()
+	return h.Clients.CountNoLock()
+}
+
+func GetClientNumPerMap() []int {
+	return h.Clients.CountPerMapNoLock()
 }
 
 func DoRegister(client *client.Client) {

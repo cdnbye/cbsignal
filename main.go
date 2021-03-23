@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/viper"
 	"net"
 	"net/http"
+	//_ "net/http/pprof"
 	"net/rpc"
 	"os"
 	"os/signal"
@@ -236,7 +237,17 @@ func main() {
 	http.HandleFunc("/", wsHandler)
 	http.HandleFunc("/count", handler.CountHandler())
 	http.HandleFunc("/version", handler.VersionHandler(version))
-	http.HandleFunc("/info", handler.StatsHandler(version, compressionEnabled))
+
+	info := handler.SignalInfo{
+		Version:            version,
+		CompressionEnabled: compressionEnabled,
+		SecurityEnabled: securityEnabled,
+		ClusterMode: isCluster,
+	}
+	if limitEnabled {
+		info.RateLimit = limitRate
+	}
+	http.HandleFunc("/info", handler.StatsHandler(info))
 
 	<-intrChan
 
@@ -275,13 +286,17 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	if securityEnabled {
 		now := time.Now().Unix()
 		tsStr := r.Form.Get("ts")
+		if tsStr == "" {
+			conn.Close()
+			return
+		}
 		if ts, err := strconv.ParseInt(tsStr, 10, 64); err != nil {
-			log.Warnf("ts ParseInt", err)
+			//log.Warnf("ts ParseInt", err)
 			conn.Close()
 			return
 		} else {
 			if now - ts > maxTimeStampAge {
-				log.Warnf("ts expired for %d origin %s", now - ts, r.Host)
+				log.Warnf("ts expired for %d origin %s", now - ts, r.Referer())
 				conn.Close()
 				return
 			}
