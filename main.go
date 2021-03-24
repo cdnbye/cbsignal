@@ -31,6 +31,11 @@ import (
 	"time"
 )
 
+const (
+	CHECK_CLIENT_INTERVAL = 15 * 60
+	EXPIRE_LIMIT = 15 * 60
+)
+
 var (
 	cfg = pflag.StringP("config", "c", "", "Config file path.")
 	newline = []byte{'\n'}
@@ -137,6 +142,24 @@ func init()  {
 	securityToken = viper.GetString("security.token")
 
 	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
+	go func() {
+		for {
+			time.Sleep(CHECK_CLIENT_INTERVAL*time.Second)
+			now := time.Now().Unix()
+			log.Warnf("start check client alive...")
+			for item := range hub.GetInstance().Clients.IterBuffered() {
+				cli := item.Val.(*client.Client)
+				if cli.LocalNode && cli.IsExpired(now, EXPIRE_LIMIT) {
+					// 节点过期
+					log.Warnf("client %s is expired, close it", cli.PeerId)
+					// TODO 打开
+					//if ok := hub.DoUnregister(cli.PeerId); ok {
+					//	cli.Conn.Close()
+					//}
+				}
+			}
+		}
+	}()
 }
 
 func main() {
@@ -285,27 +308,32 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	// 校验
 	if securityEnabled {
 		now := time.Now().Unix()
-		tsStr := r.Form.Get("ts")
-		if tsStr == "" {
+		token := strings.Split(r.Form.Get("token"), "-")
+		if len(token) < 2 {
+			log.Warnf("token not valid")
 			conn.Close()
 			return
 		}
+		sign := token[0]
+		tsStr := token[1]
 		if ts, err := strconv.ParseInt(tsStr, 10, 64); err != nil {
 			//log.Warnf("ts ParseInt", err)
 			conn.Close()
 			return
 		} else {
-			if now - ts > maxTimeStampAge {
+			if ts < now - maxTimeStampAge || ts > now + maxTimeStampAge  {
 				log.Warnf("ts expired for %d origin %s", now - ts, r.Referer())
 				conn.Close()
 				return
 			}
-			hash := r.Form.Get("token")
+			ip := strings.Split(r.RemoteAddr, ":")[0]
+			log.Infof("client ip %s", ip)
+
 			hm := hmac.New(md5.New, []byte(securityToken))
-			hm.Write([]byte(tsStr))
-			realHash := hex.EncodeToString(hm.Sum(nil))
-			if hash != realHash {
-				log.Warnf("client token %s not match %s origin %s", hash, realHash, r.Host)
+			hm.Write([]byte(tsStr + ip + id))
+			realSign := hex.EncodeToString(hm.Sum(nil))[:8]
+			if sign != realSign {
+				log.Warnf("client token %s not match %s origin %s", sign, realSign, r.Referer())
 				conn.Close()
 				return
 			}
@@ -322,8 +350,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			// 节点离开
 			log.Infof("peer leave")
-			hub.DoUnregister(id)
-			conn.Close()
+			if ok := hub.DoUnregister(id); ok {
+				//log.Infof("close peer %s", id)
+				conn.Close()
+			}
 			if isCluster {
 				broadcastClient.BroadcastMsgLeave(id)
 			}
@@ -338,6 +368,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			for _, m := range msg {
 				// ping
 				if m.OpCode.IsControl() {
+					c.UpdateTs()
 					err := wsutil.HandleClientControlMessage(conn, m)
 					if err != nil {
 						log.Infof("handle control error: %v", err)
@@ -348,6 +379,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				hdr, err := handler.NewHandler(data, c)
 				if err != nil {
 					// 心跳包
+					c.UpdateTs()
 					log.Infof("NewHandler " + err.Error())
 				} else {
 					hdr.Handle()

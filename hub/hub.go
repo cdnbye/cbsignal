@@ -25,6 +25,7 @@ func Init(compressEnable bool, compressLevel int, compressRatio int) {
 		CompressLevel: compressLevel,
 		CompressRatio: compressRatio,
 	}
+
 }
 
 func GetInstance() *Hub {
@@ -63,14 +64,16 @@ func GetClient(peerId string) (*client.Client, bool) {
 	return cli.(*client.Client), true
 }
 
-func DoUnregister(peerId string) {
+func DoUnregister(peerId string) bool {
 	log.Infof("hub DoUnregister %s", peerId)
 	if peerId == "" {
-		return
+		return false
 	}
 	if h.Clients.Has(peerId) {
 		h.Clients.Remove(peerId)
+		return true
 	}
+	return false
 }
 
 // send json object to a client with peerId

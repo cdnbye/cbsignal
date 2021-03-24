@@ -11,4 +11,5 @@ type ExceptionHandler struct {
 }
 
 func (s *ExceptionHandler)Handle() {
+	s.Cli.UpdateTs()
 }

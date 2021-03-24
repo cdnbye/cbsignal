@@ -26,9 +26,11 @@ type Client struct {
 
 	PeerId          string              //唯一标识
 
-	LocalNode bool             // 是否本节点
+	LocalNode bool             // 是否本地节点
 
 	RpcNodeAddr string       // rpc节点id
+
+	timestamp         int64
 }
 
 func NewPeerClient(peerId string, conn net.Conn, localNode bool, rpcNodeAddr string) *Client {
@@ -38,6 +40,14 @@ func NewPeerClient(peerId string, conn net.Conn, localNode bool, rpcNodeAddr str
 		LocalNode:   localNode,
 		RpcNodeAddr: rpcNodeAddr,
 	}
+}
+
+func (c *Client)UpdateTs() {
+	c.timestamp = time.Now().Unix()
+}
+
+func (c *Client)IsExpired(now, limit int64) bool {
+	return now - c.timestamp > limit
 }
 
 func (c *Client)SendMessage(msg []byte) error {
