@@ -19,6 +19,7 @@ const (
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
 
+	MAX_NOT_FOUND_PEERS_LIMIT = 5
 )
 
 type Client struct {
@@ -33,7 +34,7 @@ type Client struct {
 
 	Timestamp int64
 
-	LastNotFoundPeerId string   // 记录上一个没有找到的peer
+	NotFoundPeers     []string   // 记录没有找到的peer的队列
 }
 
 type SignalCloseResp struct {
@@ -131,4 +132,20 @@ func (c *Client)sendData(data []byte, binary bool) error {
 
 func (c *Client)Close() error {
 	return c.Conn.Close()
+}
+
+func (c *Client)EnqueueNotFoundPeer(id string) {
+	c.NotFoundPeers = append(c.NotFoundPeers, id)
+	if len(c.NotFoundPeers) > MAX_NOT_FOUND_PEERS_LIMIT {
+		c.NotFoundPeers = c.NotFoundPeers[1:len(c.NotFoundPeers)]
+	}
+}
+
+func (c *Client)HasNotFoundPeer(id string) bool {
+	for _, v := range c.NotFoundPeers {
+		if id == v {
+			return true
+		}
+	}
+	return false
 }

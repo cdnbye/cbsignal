@@ -41,8 +41,8 @@ func (s *SignalHandler)Handle() {
 		}
 		//hub.SendJsonToClient(s.Cli.PeerId, resp)
 		// 发送一次后，同一peerId下次不再发送，节省sysCall
-		if s.Cli.LastNotFoundPeerId != s.Msg.ToPeerId {
-			s.Cli.LastNotFoundPeerId = s.Msg.ToPeerId
+		if !s.Cli.HasNotFoundPeer(s.Msg.ToPeerId) {
+			s.Cli.EnqueueNotFoundPeer(s.Msg.ToPeerId)
 			hub.SendJsonToClient(s.Cli.PeerId, resp)
 		}
 	}
