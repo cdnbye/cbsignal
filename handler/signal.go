@@ -12,18 +12,18 @@ type SignalHandler struct {
 }
 
 func (s *SignalHandler)Handle() {
-	h := hub.GetInstance()
+	//h := hub.GetInstance()
 	//log.Infof("load client Msg %v", s.Msg)
 	//判断节点是否还在线
-	if h.Clients.Has(s.Msg.ToPeerId) {
+	if target, ok := hub.GetClient(s.Msg.ToPeerId); ok {
 		//log.Infof("found client %s", s.Msg.ToPeerId)
 		resp := SignalResp{
 			Action: "signal",
 			FromPeerId: s.Cli.PeerId,
 			Data: s.Msg.Data,
 		}
-		if err := hub.SendJsonToClient(s.Msg.ToPeerId, resp); err != nil {
-			log.Warnf("Send signal to peer %s error %s", s.Msg.ToPeerId, err)
+		if err := hub.SendJsonToClient(target, resp); err != nil {
+			log.Warnf("Send signal to peer %s error %s", target.PeerId, err)
 			//notFounResp := SignalResp{
 			//	Action: "signal",
 			//	FromPeerId: s.Msg.ToPeerId,
@@ -43,7 +43,7 @@ func (s *SignalHandler)Handle() {
 		// 发送一次后，同一peerId下次不再发送，节省sysCall
 		if !s.Cli.HasNotFoundPeer(s.Msg.ToPeerId) {
 			s.Cli.EnqueueNotFoundPeer(s.Msg.ToPeerId)
-			hub.SendJsonToClient(s.Cli.PeerId, resp)
+			hub.SendJsonToClient(s.Cli, resp)
 		}
 	}
 }

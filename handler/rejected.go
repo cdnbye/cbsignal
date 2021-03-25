@@ -11,14 +11,14 @@ type RejectHandler struct {
 }
 
 func (s *RejectHandler)Handle() {
-	h := hub.GetInstance()
+	//h := hub.GetInstance()
 	//判断节点是否还在线
-	if h.Clients.Has(s.Msg.ToPeerId) {
+	if target, ok := hub.GetClient(s.Msg.ToPeerId); ok {
 		resp := SignalResp{
 			Action: "reject",
 			FromPeerId: s.Cli.PeerId,
 			Reason: s.Msg.Reason,
 		}
-		hub.SendJsonToClient(s.Msg.ToPeerId, resp)
+		hub.SendJsonToClient(target, resp)
 	}
 }

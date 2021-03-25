@@ -12,7 +12,7 @@ log:
 
 port: :80
 tls:
-  port: :443                # https的端口
+  port: :443                # https port
   cert: cert/signaler.pem
   key: cert/signaler.key
 
@@ -27,9 +27,9 @@ compression:
   activationRatio: 100         # 0 <---> 100   (%)
 
 security:
-  enable: false
-  maxTimeStampAge: 3600
-  token: "%!$y&2"
+  enable: false                # Enable Authentication
+  maxTimeStampAge: 3600        # Timestamp expiration time in seconds
+  token: "%!$y&2"              # Custom token, no more than 8 characters
 
 
 

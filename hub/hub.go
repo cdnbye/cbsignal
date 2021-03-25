@@ -77,18 +77,16 @@ func DoUnregister(peerId string) bool {
 }
 
 // send json object to a client with peerId
-func SendJsonToClient(peerId string, value interface{}) error {
+func SendJsonToClient(target *client.Client, value interface{}) error {
 	b, err := json.Marshal(value)
 	if err != nil {
 		log.Error("json.Marshal", err)
 		return err
 	}
-	cli, ok := h.Clients.Get(peerId)
-	if !ok {
+	if target == nil {
 		//log.Printf("sendJsonToClient error")
-		return fmt.Errorf("peer %s not found", peerId)
+		return fmt.Errorf("peer %s not found", target.PeerId)
 	}
-	peer := cli.(*client.Client)
 	defer func() {                            // 必须要先声明defer，否则不能捕获到panic异常
 		if err := recover(); err != nil {
 			log.Warnf(err.(string))                  // 这里的err其实就是panic传入的内容
@@ -100,7 +98,7 @@ func SendJsonToClient(peerId string, value interface{}) error {
 
 
 	} else {
-		if err := peer.SendMessage(b); err != nil {
+		if err := target.SendMessage(b); err != nil {
 			//log.Warnf("sendMessage", err)
 			return err
 		}
