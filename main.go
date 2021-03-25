@@ -14,6 +14,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/lexkong/log"
@@ -32,8 +33,8 @@ import (
 )
 
 const (
-	CHECK_CLIENT_INTERVAL = 10 * 60
-	EXPIRE_LIMIT = 10 * 60
+	CHECK_CLIENT_INTERVAL = 15 * 60
+	EXPIRE_LIMIT = 15 * 60
 )
 
 var (
@@ -131,15 +132,14 @@ func init()  {
 	signalCertPath = viper.GetString("tls.cert")
 	signalKeyPath = viper.GetString("tls.key")
 
-	version = viper.GetString("version")
-	compressionEnabled = viper.GetBool("compression.enable")
-	compressionLevel = viper.GetInt("compression.level")
-	compressionActivationRatio = viper.GetInt("compression.activationRatio")
-	limitEnabled = viper.GetBool("ratelimit.enable")
-	limitRate = viper.GetInt64("ratelimit.max_rate")
-	securityEnabled = viper.GetBool("security.enable")
-	maxTimeStampAge = viper.GetInt64("security.maxTimeStampAge")
-	securityToken = viper.GetString("security.token")
+	setupConfigFromViper()
+
+	//开始监听
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		log.Warnf("config is changed :%s \n", e.Name)
+		setupConfigFromViper()
+	})
 
 	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
 	go func() {
@@ -154,7 +154,7 @@ func init()  {
 					// 节点过期
 					//log.Warnf("client %s is expired for %d, close it", cli.PeerId, now-cli.Timestamp)
 					if ok := hub.DoUnregister(cli.PeerId); ok {
-						cli.Conn.Close()
+						cli.Close()
 						count ++
 					}
 				}
@@ -396,7 +396,19 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 func closeInvalidConn(cli *client.Client)  {
 	cli.SendMsgClose("invalid client")
-	cli.Conn.Close()
+	cli.Close()
+}
+
+func setupConfigFromViper()  {
+	version = viper.GetString("version")
+	compressionEnabled = viper.GetBool("compression.enable")
+	compressionLevel = viper.GetInt("compression.level")
+	compressionActivationRatio = viper.GetInt("compression.activationRatio")
+	limitEnabled = viper.GetBool("ratelimit.enable")
+	limitRate = viper.GetInt64("ratelimit.max_rate")
+	securityEnabled = viper.GetBool("security.enable")
+	maxTimeStampAge = viper.GetInt64("security.maxTimeStampAge")
+	securityToken = viper.GetString("security.token")
 }
 
 

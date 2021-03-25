@@ -128,3 +128,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 	}
 	return nil
 }
+
+func (c *Client)Close() error {
+	return c.Conn.Close()
+}
