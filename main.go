@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/viper"
 	"net"
 	"net/http"
-	//_ "net/http/pprof"
+	_ "net/http/pprof"
 	"net/rpc"
 	"os"
 	"os/signal"
@@ -32,8 +32,8 @@ import (
 )
 
 const (
-	CHECK_CLIENT_INTERVAL = 15 * 60
-	EXPIRE_LIMIT = 15 * 60
+	CHECK_CLIENT_INTERVAL = 10 * 60
+	EXPIRE_LIMIT = 10 * 60
 )
 
 var (
@@ -147,17 +147,19 @@ func init()  {
 			time.Sleep(CHECK_CLIENT_INTERVAL*time.Second)
 			now := time.Now().Unix()
 			log.Warnf("start check client alive...")
+			count := 0
 			for item := range hub.GetInstance().Clients.IterBuffered() {
 				cli := item.Val.(*client.Client)
 				if cli.LocalNode && cli.IsExpired(now, EXPIRE_LIMIT) {
 					// 节点过期
-					log.Warnf("client %s is expired, close it", cli.PeerId)
-					// TODO 打开
-					//if ok := hub.DoUnregister(cli.PeerId); ok {
-					//	cli.Conn.Close()
-					//}
+					//log.Warnf("client %s is expired for %d, close it", cli.PeerId, now-cli.Timestamp)
+					if ok := hub.DoUnregister(cli.PeerId); ok {
+						cli.Conn.Close()
+						count ++
+					}
 				}
 			}
+			log.Warnf("check client finished, closed %d clients", count)
 		}
 	}()
 }
@@ -299,48 +301,50 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	r.ParseForm()
 	id := r.Form.Get("id")
+	//platform := r.Form.Get("p")
 	//log.Printf("id %s", id)
 	if id == "" {
 		conn.Close()
 		return
 	}
 
+	c := client.NewPeerClient(id, conn, true, selfAddr)
+
 	// 校验
 	if securityEnabled {
 		now := time.Now().Unix()
 		token := strings.Split(r.Form.Get("token"), "-")
 		if len(token) < 2 {
-			log.Warnf("token not valid")
-			conn.Close()
+			log.Warnf("token not valid %s origin %s", r.Form.Get("token"), r.Header.Get("Origin"))
+			closeInvalidConn(c)
 			return
 		}
 		sign := token[0]
 		tsStr := token[1]
 		if ts, err := strconv.ParseInt(tsStr, 10, 64); err != nil {
 			//log.Warnf("ts ParseInt", err)
-			conn.Close()
+			closeInvalidConn(c)
 			return
 		} else {
 			if ts < now - maxTimeStampAge || ts > now + maxTimeStampAge  {
-				log.Warnf("ts expired for %d origin %s", now - ts, r.Referer())
-				conn.Close()
+				log.Warnf("ts expired for %d origin %s", now - ts, r.Header.Get("Origin"))
+				closeInvalidConn(c)
 				return
 			}
-			ip := strings.Split(r.RemoteAddr, ":")[0]
-			log.Infof("client ip %s", ip)
+			//ip := strings.Split(r.RemoteAddr, ":")[0]
+			//log.Infof("client ip %s", ip)
 
 			hm := hmac.New(md5.New, []byte(securityToken))
-			hm.Write([]byte(tsStr + ip + id))
+			hm.Write([]byte(tsStr + id))
 			realSign := hex.EncodeToString(hm.Sum(nil))[:8]
 			if sign != realSign {
-				log.Warnf("client token %s not match %s origin %s", sign, realSign, r.Referer())
-				conn.Close()
+				log.Warnf("client token %s not match %s origin %s", sign, realSign, r.Header.Get("Origin"))
+				closeInvalidConn(c)
 				return
 			}
 		}
 	}
 
-	c := client.NewPeerClient(id, conn, true, selfAddr)
 	hub.DoRegister(c)
 	if isCluster {
 		broadcastClient.BroadcastMsgJoin(id)
@@ -352,7 +356,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Infof("peer leave")
 			if ok := hub.DoUnregister(id); ok {
 				//log.Infof("close peer %s", id)
-				conn.Close()
+				closeInvalidConn(c)
 			}
 			if isCluster {
 				broadcastClient.BroadcastMsgLeave(id)
@@ -369,6 +373,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				// ping
 				if m.OpCode.IsControl() {
 					c.UpdateTs()
+					//log.Warnf("receive ping from %s platform %s", id, platform)
 					err := wsutil.HandleClientControlMessage(conn, m)
 					if err != nil {
 						log.Infof("handle control error: %v", err)
@@ -387,6 +392,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
+}
+
+func closeInvalidConn(cli *client.Client)  {
+	cli.SendMsgClose("invalid client")
+	cli.Conn.Close()
 }
 
 

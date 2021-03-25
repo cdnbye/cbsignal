@@ -10,6 +10,7 @@ type ExceptionHandler struct {
 	Cli   *client.Client
 }
 
+// handle {}
 func (s *ExceptionHandler)Handle() {
-	s.Cli.UpdateTs()
+	//s.Cli.UpdateTs()
 }

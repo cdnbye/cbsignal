@@ -2,6 +2,7 @@ package client
 
 import (
 	"cbsignal/rpcservice"
+	"encoding/json"
 	"fmt"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -30,7 +31,16 @@ type Client struct {
 
 	RpcNodeAddr string       // rpc节点id
 
-	timestamp         int64
+	Timestamp int64
+
+	LastNotFoundPeerId string   // 记录上一个没有找到的peer
+}
+
+type SignalCloseResp struct {
+	Action string              `json:"action"`
+	FromPeerId string          `json:"from_peer_id,omitempty"`
+	Data interface{}           `json:"data,omitempty"`
+	Reason string              `json:"reason,omitempty"`
 }
 
 func NewPeerClient(peerId string, conn net.Conn, localNode bool, rpcNodeAddr string) *Client {
@@ -39,15 +49,30 @@ func NewPeerClient(peerId string, conn net.Conn, localNode bool, rpcNodeAddr str
 		PeerId:      peerId,
 		LocalNode:   localNode,
 		RpcNodeAddr: rpcNodeAddr,
+		Timestamp:   time.Now().Unix(),
 	}
 }
 
 func (c *Client)UpdateTs() {
-	c.timestamp = time.Now().Unix()
+	//log.Warnf("%s UpdateTs", c.PeerId)
+	c.Timestamp = time.Now().Unix()
 }
 
 func (c *Client)IsExpired(now, limit int64) bool {
-	return now - c.timestamp > limit
+	return now - c.Timestamp > limit
+}
+
+func (c *Client)SendMsgClose(reason string) error {
+	resp := SignalCloseResp{
+		Action: "close",
+		Reason: reason,
+	}
+	b, err := json.Marshal(resp)
+	if err != nil {
+		log.Error("json.Marshal", err)
+		return err
+	}
+	return c.SendMessage(b)
 }
 
 func (c *Client)SendMessage(msg []byte) error {

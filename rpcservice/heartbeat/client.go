@@ -109,7 +109,7 @@ func (h *Client) StartHeartbeat() {
 				go deletePeersInNode(h.masterAddr)
 				h.DialHeartbeatService()
 			}
-			log.Infof("heartbeatResp %s", heartbeatResp)
+			log.Debugf("heartbeatResp %s", heartbeatResp)
 			// 删除死节点
 			for addr, node := range h.nodeHub.GetAll() {
 				if !node.IsAlive() {

@@ -3,6 +3,7 @@ package handler
 import (
 	"cbsignal/client"
 	"encoding/json"
+	"time"
 )
 
 type Handler interface {
@@ -24,6 +25,13 @@ type SignalResp struct {
 }
 
 func NewHandler(message []byte, cli *client.Client) (Handler, error) {
+
+	// TODO 去掉
+	now := time.Now().Unix()
+	if now - cli.Timestamp >= 270 {
+		cli.UpdateTs()
+	}
+
 	signal := SignalMsg{}
 	if err := json.Unmarshal(message, &signal); err != nil {
 		//log.Println(err)
