@@ -62,6 +62,9 @@ func NewNode(addr string) *Node {
 
 func (s *Node) DialNode() error {
 	attemts := 0
+	s.Lock()
+	s.isAlive = false
+	s.Unlock()
 	for {
 		c, err := rpc.Dial("tcp", s.addr)
 		if err != nil {

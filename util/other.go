@@ -2,6 +2,7 @@ package util
 
 import (
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -13,4 +14,11 @@ func GetDomain(uri string) string {
 	}
 	a := strings.Split(parsed.Host, ":")
 	return a[0]
+}
+
+func GetVersionNum(ver string) int {
+	digs := strings.Split(ver, ".")
+	a , _ := strconv.Atoi(digs[0])
+	b , _ := strconv.Atoi(digs[1])
+	return a*10 + b
 }

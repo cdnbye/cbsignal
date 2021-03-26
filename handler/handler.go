@@ -25,12 +25,6 @@ type SignalResp struct {
 
 func NewHandler(message []byte, cli *client.Client) (Handler, error) {
 
-	// TODO 去掉
-	//now := time.Now().Unix()
-	//if now - cli.Timestamp >= 270 {
-	//	cli.UpdateTs()
-	//}
-
 	signal := SignalMsg{}
 	if err := json.Unmarshal(message, &signal); err != nil {
 		//log.Println(err)
@@ -43,7 +37,7 @@ func NewHandlerMsg(signal SignalMsg, cli *client.Client) (Handler, error) {
 	switch signal.Action {
 	case "signal":
 		return &SignalHandler{Msg: &signal, Cli: cli}, nil
-	case "heartbeat":
+	case "ping":
 		return &HeartbeatHandler{Cli: cli}, nil
 	case "rejected":
 		return &RejectHandler{Msg: &signal, Cli: cli}, nil

@@ -44,6 +44,11 @@ type SignalCloseResp struct {
 	Reason string              `json:"reason,omitempty"`
 }
 
+type SignalVerResp struct {
+	Action string              `json:"action"`
+	Ver int                    `json:"ver"`
+}
+
 func NewPeerClient(peerId string, conn net.Conn, localNode bool, rpcNodeAddr string) *Client {
 	return &Client{
 		Conn:        conn,
@@ -67,6 +72,19 @@ func (c *Client)SendMsgClose(reason string) error {
 	resp := SignalCloseResp{
 		Action: "close",
 		Reason: reason,
+	}
+	b, err := json.Marshal(resp)
+	if err != nil {
+		log.Error("json.Marshal", err)
+		return err
+	}
+	return c.SendMessage(b)
+}
+
+func (c *Client)SendMsgVersion(version int) error {
+	resp := SignalVerResp{
+		Action: "ver",
+		Ver: version,
 	}
 	b, err := json.Marshal(resp)
 	if err != nil {
@@ -117,6 +135,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 			if err != nil {
 				log.Warnf("SendMsgSignal to remote failed " + err.Error())
 				// 节点出现问题
+				node.DialNode()
 				return err
 			}
 			if !resp.Success {

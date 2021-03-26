@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/viper"
 	"net"
 	"net/http"
-	//_ "net/http/pprof"
+	_ "net/http/pprof"
 	"net/rpc"
 	"os"
 	"os/signal"
@@ -56,6 +56,7 @@ var (
 	signalKeyPath  string
 
 	version string
+	versionNum int
 	compressionEnabled bool
 	compressionLevel int
 	compressionActivationRatio int
@@ -346,6 +347,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hub.DoRegister(c)
+	// 发送版本号
+	c.SendMsgVersion(versionNum)
 	if isCluster {
 		broadcastClient.BroadcastMsgJoin(id)
 	}
@@ -401,6 +404,7 @@ func closeInvalidConn(cli *client.Client)  {
 
 func setupConfigFromViper()  {
 	version = viper.GetString("version")
+	versionNum = util.GetVersionNum(version)
 	compressionEnabled = viper.GetBool("compression.enable")
 	compressionLevel = viper.GetInt("compression.level")
 	compressionActivationRatio = viper.GetInt("compression.activationRatio")
