@@ -4,7 +4,6 @@ import (
 	"cbsignal/client"
 	"cbsignal/util/cmap"
 	"encoding/json"
-	"fmt"
 	"github.com/lexkong/log"
 )
 
@@ -56,12 +55,16 @@ func DoRegisterRemoteClient(peerId string, addr string) {
 	DoRegister(c)
 }
 
-func GetClient(peerId string) (*client.Client, bool) {
-	cli, ok := h.Clients.Get(peerId)
+func GetClient(id string) (*client.Client, bool) {
+	cli, ok := h.Clients.Get(id)
 	if !ok {
 		return nil, false
 	}
 	return cli.(*client.Client), true
+}
+
+func RemoveClient(id string) {
+	h.Clients.Remove(id)
 }
 
 func DoUnregister(peerId string) bool {
@@ -83,10 +86,10 @@ func SendJsonToClient(target *client.Client, value interface{}) error {
 		log.Error("json.Marshal", err)
 		return err
 	}
-	if target == nil {
-		//log.Printf("sendJsonToClient error")
-		return fmt.Errorf("peer %s not found", target.PeerId)
-	}
+	//if target == nil {
+	//	//log.Printf("sendJsonToClient error")
+	//	return fmt.Errorf("peer %s not found", target.PeerId)
+	//}
 	defer func() {                            // 必须要先声明defer，否则不能捕获到panic异常
 		if err := recover(); err != nil {
 			log.Warnf(err.(string))                  // 这里的err其实就是panic传入的内容

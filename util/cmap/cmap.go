@@ -215,6 +215,18 @@ func (m ConcurrentMap) IterBuffered() <-chan Tuple {
 	return ch
 }
 
+func (m ConcurrentMap) GetChanByShard(index int) chan Tuple {
+	shard := m[index]
+	shard.RLock()
+	ch := make(chan Tuple, len(shard.items))
+	for key, val := range shard.items {
+		ch <- Tuple{key, val}
+	}
+	shard.RUnlock()
+	close(ch)
+	return ch
+}
+
 // Clear removes all items from map.
 func (m ConcurrentMap) Clear() {
 	for item := range m.IterBuffered() {

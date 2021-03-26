@@ -24,11 +24,13 @@ func (s *SignalHandler)Handle() {
 		}
 		if err := hub.SendJsonToClient(target, resp); err != nil {
 			log.Warnf("Send signal to peer %s error %s", target.PeerId, err)
-			//notFounResp := SignalResp{
-			//	Action: "signal",
-			//	FromPeerId: s.Msg.ToPeerId,
-			//}
-			//hub.SendJsonToClient(s.Cli.PeerId, notFounResp)
+			hub.RemoveClient(target.PeerId)
+			s.Cli.EnqueueNotFoundPeer(target.PeerId)
+			notFounResp := SignalResp{
+				Action: "signal",
+				FromPeerId: s.Msg.ToPeerId,
+			}
+			hub.SendJsonToClient(s.Cli, notFounResp)
 		}
 		//if !target.(*client.Client).LocalNode {
 		//	log.Warnf("send signal msg from %s to %s on node %s", s.Cli.PeerId, s.Msg.ToPeerId, target.(*client.Client).RpcNodeAddr)

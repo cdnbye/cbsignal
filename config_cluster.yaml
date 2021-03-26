@@ -17,6 +17,7 @@ tls:
   key: cert/signaler.key
 
 cluster:
+  enable: true
   self:
 #    ip: 127.0.0.1              # 本节点的内网IP The internal IP of current node
     port: :56623               # 本节点的rpc端口，如果和master相同则作为master节点 The RPC port of current node, it will be regarded as master node if this port is same as master

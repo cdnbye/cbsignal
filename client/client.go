@@ -120,6 +120,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 				return err
 			}
 			if !resp.Success {
+				// TODO 过滤
 				log.Warnf("SendMsgSignal failed reason " + resp.Reason)
 				return fmt.Errorf(resp.Reason)
 			}

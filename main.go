@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/viper"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
+	//_ "net/http/pprof"
 	"net/rpc"
 	"os"
 	"os/signal"
@@ -105,7 +105,7 @@ func init()  {
 		fmt.Errorf("Initialize logger %s", err)
 	}
 
-	isCluster = viper.GetString("cluster.self.port") != ""
+	isCluster = viper.GetBool("cluster.enable")
 	if isCluster {
 		selfIp = viper.GetString("cluster.self.ip")
 		if selfIp == "" {
