@@ -51,6 +51,7 @@ func (h *Client) NodeHub() *rpcservice.NodeHub {
 	return h.nodeHub
 }
 
+// 连接master并向master获取节点
 func (h *Client) DialHeartbeatService() {
 	if h.masterAddr == "" {
 		panic("masterAddr is nil")

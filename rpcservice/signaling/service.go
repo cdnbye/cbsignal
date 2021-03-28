@@ -23,8 +23,13 @@ func RegisterSignalService() error {
 func (b *Service) Signal(request rpcservice.SignalReq, reply *rpcservice.RpcResp) error  {
 	req := handler.SignalResp{}
 	if err := json.Unmarshal(request.Data, &req);err != nil {
+		log.Warnf("json.Unmarshal error %s", err.Error())
 		return err
 	}
+
+	// test
+	//time.Sleep(3*time.Second)
+
 	log.Infof("rpc receive signal from %s to %s action %s", req.FromPeerId, request.ToPeerId, req.Action)
 	cli, ok := hub.GetClient(req.FromPeerId)
 	if !ok {
@@ -44,5 +49,6 @@ func (b *Service) Signal(request rpcservice.SignalReq, reply *rpcservice.RpcResp
 		}
 		hdr.Handle()
 	}
+
 	return nil
 }

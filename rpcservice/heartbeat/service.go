@@ -14,7 +14,6 @@ const (
 	EXPIRE_TOMEOUT = 21
 )
 
-
 type PongResp struct {
 	Nodes []string
 }
@@ -52,12 +51,13 @@ func RegisterHeartbeatService() error {
 			}
 		}
 	}()
+	//log.Warnf("do RegisterName(HEARTBEAT_SERVICE, s)")
 	return rpc.RegisterName(HEARTBEAT_SERVICE, s)
 }
 
 func (h *Service) Pong(request PingReq, reply *PongResp) error {
 	addr := request.Addr
-	//log.Infof("receive ping from %s", addr)
+	log.Infof("receive ping from %s", addr)
 	p, ok := h.Nodes[addr]
 	if ok {
 		p.UpdateTs()

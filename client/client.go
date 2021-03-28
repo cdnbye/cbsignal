@@ -78,7 +78,8 @@ func (c *Client)SendMsgClose(reason string) error {
 		log.Error("json.Marshal", err)
 		return err
 	}
-	return c.SendMessage(b)
+	err, _ = c.SendMessage(b)
+	return err
 }
 
 func (c *Client)SendMsgVersion(version int) error {
@@ -91,18 +92,19 @@ func (c *Client)SendMsgVersion(version int) error {
 		log.Error("json.Marshal", err)
 		return err
 	}
-	return c.SendMessage(b)
+	err, _ = c.SendMessage(b)
+	return err
 }
 
-func (c *Client)SendMessage(msg []byte) error {
+func (c *Client)SendMessage(msg []byte) (error, bool) {
 	return c.sendData(msg, false)
 }
 
-func (c *Client)SendBinaryData(data []byte) error {
+func (c *Client)SendBinaryData(data []byte) (error, bool) {
 	return c.sendData(data, true)
 }
 
-func (c *Client)sendData(data []byte, binary bool) error {
+func (c *Client)sendData(data []byte, binary bool) (error, bool) {
 	var opCode ws.OpCode
 	if binary {
 		opCode = ws.OpBinary
@@ -116,7 +118,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 		if err != nil {
 			// handle error
 			log.Infof("WriteServerMessage " + err.Error())
-			return err
+			return err, true
 		}
 	} else {
 		// 非本地节点
@@ -124,7 +126,7 @@ func (c *Client)sendData(data []byte, binary bool) error {
 		node, ok := rpcservice.GetNode(c.RpcNodeAddr)
 		if ok {
 			if !node.IsAlive() {
-				return fmt.Errorf("node %s is not alive when send signal", node.Addr())
+				return fmt.Errorf("node %s is not alive when send signal", node.Addr()), true
 			}
 			req := rpcservice.SignalReq{
 				ToPeerId: c.PeerId,
@@ -133,21 +135,21 @@ func (c *Client)sendData(data []byte, binary bool) error {
 			var resp rpcservice.RpcResp
 			err := node.SendMsgSignal(req, &resp)
 			if err != nil {
-				log.Warnf("SendMsgSignal to remote failed " + err.Error())
+				//log.Warnf("SendMsgSignal to remote failed " + err.Error())
+				//log.Warnf("req %+v", req)
 				// 节点出现问题
-				node.DialNode()
-				return err
+				//node.dialWithChannel()
+				return err, true
 			}
 			if !resp.Success {
-				// TODO 过滤
-				log.Warnf("SendMsgSignal failed reason " + resp.Reason)
-				return fmt.Errorf(resp.Reason)
+				//log.Warnf("SendMsgSignal failed reason " + resp.Reason)
+				return fmt.Errorf(resp.Reason), false
 			}
 		} else {
 			log.Warnf("node %s not found", c.RpcNodeAddr)
 		}
 	}
-	return nil
+	return nil, false
 }
 
 func (c *Client)Close() error {

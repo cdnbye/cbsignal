@@ -33,6 +33,7 @@ import (
 )
 
 const (
+	VERSION = "2.2.0"
 	CHECK_CLIENT_INTERVAL = 15 * 60
 	EXPIRE_LIMIT = 15 * 60
 )
@@ -55,7 +56,6 @@ var (
 	signalCertPath string
 	signalKeyPath  string
 
-	version string
 	versionNum int
 	compressionEnabled bool
 	compressionLevel int
@@ -75,6 +75,8 @@ var (
 
 func init()  {
 	pflag.Parse()
+
+	versionNum = util.GetVersionNum(VERSION)
 
 	// Initialize viper
 	if *cfg != "" {
@@ -262,10 +264,10 @@ func main() {
 	http.HandleFunc("/wss", wsHandler)
 	http.HandleFunc("/", wsHandler)
 	http.HandleFunc("/count", handler.CountHandler())
-	http.HandleFunc("/version", handler.VersionHandler(version))
+	http.HandleFunc("/version", handler.VersionHandler(VERSION))
 
 	info := handler.SignalInfo{
-		Version:            version,
+		Version:            VERSION,
 		CompressionEnabled: compressionEnabled,
 		SecurityEnabled: securityEnabled,
 		ClusterMode: isCluster,
@@ -347,11 +349,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hub.DoRegister(c)
+	if isCluster {
+		go broadcastClient.BroadcastMsgJoin(id)
+	}
 	// 发送版本号
 	c.SendMsgVersion(versionNum)
-	if isCluster {
-		broadcastClient.BroadcastMsgJoin(id)
-	}
 
 	go func() {
 		defer func() {
@@ -362,7 +364,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				closeInvalidConn(c)
 			}
 			if isCluster {
-				broadcastClient.BroadcastMsgLeave(id)
+				go broadcastClient.BroadcastMsgLeave(id)
 			}
 		}()
 		msg := make([]wsutil.Message, 0, 4)
@@ -403,8 +405,6 @@ func closeInvalidConn(cli *client.Client)  {
 }
 
 func setupConfigFromViper()  {
-	version = viper.GetString("version")
-	versionNum = util.GetVersionNum(version)
 	compressionEnabled = viper.GetBool("compression.enable")
 	compressionLevel = viper.GetInt("compression.level")
 	compressionActivationRatio = viper.GetInt("compression.activationRatio")

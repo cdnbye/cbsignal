@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestUtilizationRate(t *testing.T)  {
@@ -20,6 +21,14 @@ func TestVersion(t *testing.T) {
 	a , _ := strconv.Atoi(digs[0])
 	b , _ := strconv.Atoi(digs[1])
 	t.Logf("%d", a*10 + b)
+}
+
+func TestTime(t *testing.T)  {
+	s := 2 * time.Second.Nanoseconds()
+	start := time.Now()
+	time.Sleep(300*time.Microsecond)
+	t.Logf("%d %d", time.Since(start).Nanoseconds(), s)
+
 }
 
 

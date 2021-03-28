@@ -43,6 +43,8 @@ func DoRegister(client *client.Client) {
 	log.Infof("hub DoRegister %s", client.PeerId)
 	if client.PeerId != "" {
 		h.Clients.Set(client.PeerId, client)
+	} else {
+		panic("DoRegister")
 	}
 }
 
@@ -80,11 +82,11 @@ func DoUnregister(peerId string) bool {
 }
 
 // send json object to a client with peerId
-func SendJsonToClient(target *client.Client, value interface{}) error {
+func SendJsonToClient(target *client.Client, value interface{}) (error, bool) {
 	b, err := json.Marshal(value)
 	if err != nil {
 		log.Error("json.Marshal", err)
-		return err
+		return err, false
 	}
 	//if target == nil {
 	//	//log.Printf("sendJsonToClient error")
@@ -101,12 +103,9 @@ func SendJsonToClient(target *client.Client, value interface{}) error {
 
 
 	} else {
-		if err := target.SendMessage(b); err != nil {
-			//log.Warnf("sendMessage", err)
-			return err
-		}
+		return target.SendMessage(b)
 	}
-	return nil
+	return nil, false
 }
 
 func ClearAll()  {
