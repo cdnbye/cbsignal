@@ -19,6 +19,7 @@ const (
 	DIAL_MAX_ATTENTS  = 2
 	ATTENTS_INTERVAL  = 2     // second
 	PING_INTERVAL     = 5
+	READ_TIMEOUT      = 1500 * time.Millisecond
 )
 
 type JoinLeaveReq struct {
@@ -116,7 +117,7 @@ func (s *Node) SendMsgLeave(request JoinLeaveReq, reply *RpcResp) error {
 	}
 	log.Infof("SendMsgLeave to %s", s.addr)
 	request.Addr = s.addr
-	return s.Client.Call(BROADCAST_SERVICE+LEAVE, request, reply)
+	return s.sendInternal(BROADCAST_SERVICE+LEAVE, request, reply)
 }
 
 func (s *Node) SendMsgSignal(request SignalReq, reply *RpcResp) error {
@@ -124,15 +125,50 @@ func (s *Node) SendMsgSignal(request SignalReq, reply *RpcResp) error {
 		return errors.New(fmt.Sprintf("node %s is not alive", s.addr))
 	}
 	//log.Infof("SendMsgSignal to %s", s.addr)
-	return s.Client.Call(SIGNAL_SERVICE+SIGNAL, request, reply)
+	return s.sendInternal(SIGNAL_SERVICE+SIGNAL, request, reply)
 }
 
 func (s *Node) SendMsgPing(request Ping, reply *Pong) error {
 	if !s.isAlive {
 		return errors.New(fmt.Sprintf("node %s is not alive", s.addr))
 	}
-	//log.Infof("SendMsgPing to %s", s.addr)
-	return s.Client.Call(BROADCAST_SERVICE+PONG, request, reply)
+	log.Infof("SendMsgPing to %s", s.addr)
+	return s.sendInternal(BROADCAST_SERVICE+PONG, request, reply)
+}
+
+func (s *Node) sendInternal(method string, args interface{}, reply interface{}) error {
+	//start := time.Now()
+	//done := make(chan error, 1)
+
+	done := make(chan *rpc.Call, 1)
+
+
+
+	//client.Go(method, args, reply, done)
+
+	s.Client.Go(method, args, reply, done)
+	//return call.Error
+
+	select {
+	case <-time.After(READ_TIMEOUT):
+		//log.Warnf("rpc call timeout %s", method)
+		//s.Client.Close()
+		return fmt.Errorf("rpc call timeout %s", method)
+	case err := <-done:
+		//elapsed := time.Since(start)
+		//log.Warnf("6666 %d %d", elapsed.Nanoseconds(), PRINT_WARN_LIMIT_NANO)
+		//if elapsed.Nanoseconds() >= PRINT_WARN_LIMIT_NANO {
+		//	log.Warnf("rpc send %s cost %v", method, elapsed)
+		//}
+
+		if err.Error != nil {
+			//rpcClient.Close()
+			return err.Error
+		}
+
+	}
+
+	return nil
 }
 
 func (s *Node) StartHeartbeat() {

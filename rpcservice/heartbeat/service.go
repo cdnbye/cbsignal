@@ -57,7 +57,7 @@ func RegisterHeartbeatService() error {
 
 func (h *Service) Pong(request PingReq, reply *PongResp) error {
 	addr := request.Addr
-	//log.Infof("receive ping from %s", addr)
+	log.Infof("receive ping from %s", addr)
 	p, ok := h.Nodes[addr]
 	if ok {
 		p.UpdateTs()

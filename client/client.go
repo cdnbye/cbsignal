@@ -133,14 +133,13 @@ func (c *Client)sendData(data []byte, binary bool) error {
 			var resp rpcservice.RpcResp
 			err := node.SendMsgSignal(req, &resp)
 			if err != nil {
-				log.Warnf("SendMsgSignal to remote failed " + err.Error())
+				//log.Warnf("SendMsgSignal to remote failed " + err.Error())
 				// 节点出现问题
-				node.DialNode()
+				//node.DialNode()
 				return err
 			}
 			if !resp.Success {
-				// TODO 过滤
-				log.Warnf("SendMsgSignal failed reason " + resp.Reason)
+				//log.Warnf("SendMsgSignal failed reason " + resp.Reason)
 				return fmt.Errorf(resp.Reason)
 			}
 		} else {
