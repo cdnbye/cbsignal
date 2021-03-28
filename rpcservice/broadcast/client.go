@@ -52,3 +52,7 @@ func (c *Client) BroadcastMsgLeave(id string)  {
 	}
 }
 
+func (c *Client) GetNodeHub() *rpcservice.NodeHub {
+	return c.nodeHub
+}
+

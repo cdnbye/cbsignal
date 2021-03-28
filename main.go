@@ -279,6 +279,7 @@ func main() {
 
 	<-intrChan
 
+	broadcastClient.GetNodeHub().Clear()
 	log.Info("Shutting down server...")
 }
 
