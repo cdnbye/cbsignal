@@ -58,11 +58,7 @@ func DoRegisterRemoteClient(peerId string, addr string) {
 }
 
 func GetClient(id string) (*client.Client, bool) {
-	cli, ok := h.Clients.Get(id)
-	if !ok {
-		return nil, false
-	}
-	return cli.(*client.Client), true
+	return h.Clients.Get(id)
 }
 
 func RemoveClient(id string) {

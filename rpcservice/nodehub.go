@@ -27,6 +27,10 @@ func GetNode(addr string) (*Node, bool) {
 func (n *NodeHub) Delete(addr string) {
 	log.Warnf("NodeHub delete %s", addr)
 	n.mu.Lock()
+	if node, ok := n.nodes[addr]; ok {
+		node.Released = true
+		node.connPool.Shutdown()
+	}
 	delete(n.nodes, addr)
 	n.mu.Unlock()
 }

@@ -1,7 +1,6 @@
 package heartbeat
 
 import (
-	"cbsignal/client"
 	"cbsignal/hub"
 	"cbsignal/rpcservice"
 	"github.com/lexkong/log"
@@ -148,8 +147,7 @@ func deletePeersInNode(addr string)  {
 	//})
 
 	for item := range hub.GetInstance().Clients.IterBuffered() {
-		val := item.Val
-		cli := val.(*client.Client)
+		cli := item.Val
 		if cli.RpcNodeAddr == addr {
 			log.Infof("delete cli %s in deleted node %s", cli.PeerId, addr)
 			hub.DoUnregister(cli.PeerId)

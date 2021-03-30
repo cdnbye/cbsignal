@@ -28,7 +28,17 @@ func TestTime(t *testing.T)  {
 	start := time.Now()
 	time.Sleep(300*time.Microsecond)
 	t.Logf("%d %d", time.Since(start).Nanoseconds(), s)
+}
 
+func TestFnv32(t *testing.T) {
+	key := "ddffvfgfgf"
+	hash := uint32(2166136261)
+	const prime32 = uint32(16777619)
+	for i := 0; i < len(key); i++ {
+		hash *= prime32
+		hash ^= uint32(key[i])
+	}
+	t.Log(hash)
 }
 
 

@@ -117,7 +117,7 @@ func (c *Client)sendData(data []byte, binary bool) (error, bool) {
 		err := wsutil.WriteServerMessage(c.Conn, opCode, data)
 		if err != nil {
 			// handle error
-			log.Infof("WriteServerMessage " + err.Error())
+			log.Warnf("WriteServerMessage " + err.Error())
 			return err, true
 		}
 	} else {

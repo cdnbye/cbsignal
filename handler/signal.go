@@ -27,7 +27,11 @@ func (s *SignalHandler)Handle() {
 			Data: s.Msg.Data,
 		}
 		if err, fatal := hub.SendJsonToClient(target, resp); err != nil {
-			log.Warnf("%s send signal to peer %s error %s", s.Cli.PeerId, target.PeerId, err)
+			peerType := "local"
+			if !target.LocalNode {
+				peerType = "remote"
+			}
+			log.Warnf("%s send signal to %s peer %s error %s", s.Cli.PeerId, peerType, target.PeerId, err)
 			if !fatal {
 				//hub.RemoveClient(target.PeerId)
 				s.Cli.EnqueueNotFoundPeer(target.PeerId)
