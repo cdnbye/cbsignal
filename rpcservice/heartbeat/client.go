@@ -1,7 +1,6 @@
 package heartbeat
 
 import (
-	"cbsignal/client"
 	"cbsignal/hub"
 	"cbsignal/rpcservice"
 	"github.com/lexkong/log"
@@ -51,6 +50,7 @@ func (h *Client) NodeHub() *rpcservice.NodeHub {
 	return h.nodeHub
 }
 
+// 连接master并向master获取节点
 func (h *Client) DialHeartbeatService() {
 	if h.masterAddr == "" {
 		panic("masterAddr is nil")
@@ -147,8 +147,7 @@ func deletePeersInNode(addr string)  {
 	//})
 
 	for item := range hub.GetInstance().Clients.IterBuffered() {
-		val := item.Val
-		cli := val.(*client.Client)
+		cli := item.Val
 		if cli.RpcNodeAddr == addr {
 			log.Infof("delete cli %s in deleted node %s", cli.PeerId, addr)
 			hub.DoUnregister(cli.PeerId)

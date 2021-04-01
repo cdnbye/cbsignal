@@ -15,22 +15,32 @@ func (s *SignalHandler)Handle() {
 	//h := hub.GetInstance()
 	//log.Infof("load client Msg %v", s.Msg)
 	//判断节点是否还在线
-	if target, ok := hub.GetClient(s.Msg.ToPeerId); ok {
+	if target, ok := hub.GetClient(s.Msg.ToPeerId); ok && !s.Cli.HasNotFoundPeer(s.Msg.ToPeerId) {
 		//log.Infof("found client %s", s.Msg.ToPeerId)
+		if s.Cli.PeerId == "" {
+			log.Warnf("PeerId is not valid")
+			return
+		}
 		resp := SignalResp{
 			Action: "signal",
 			FromPeerId: s.Cli.PeerId,
 			Data: s.Msg.Data,
 		}
-		if err := hub.SendJsonToClient(target, resp); err != nil {
-			log.Warnf("Send signal to peer %s error %s", target.PeerId, err)
-			hub.RemoveClient(target.PeerId)
-			s.Cli.EnqueueNotFoundPeer(target.PeerId)
-			notFounResp := SignalResp{
-				Action: "signal",
-				FromPeerId: s.Msg.ToPeerId,
+		if err, fatal := hub.SendJsonToClient(target, resp); err != nil {
+			peerType := "local"
+			if !target.LocalNode {
+				peerType = "remote"
 			}
-			hub.SendJsonToClient(s.Cli, notFounResp)
+			log.Warnf("%s send signal to %s peer %s error %s", s.Cli.PeerId, peerType, target.PeerId, err)
+			if !fatal {
+				//hub.RemoveClient(target.PeerId)
+				s.Cli.EnqueueNotFoundPeer(target.PeerId)
+				notFounResp := SignalResp{
+					Action: "signal",
+					FromPeerId: target.PeerId,
+				}
+				hub.SendJsonToClient(s.Cli, notFounResp)
+			}
 		}
 		//if !target.(*client.Client).LocalNode {
 		//	log.Warnf("send signal msg from %s to %s on node %s", s.Cli.PeerId, s.Msg.ToPeerId, target.(*client.Client).RpcNodeAddr)

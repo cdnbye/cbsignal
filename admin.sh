@@ -63,6 +63,7 @@ function start()
 {
   chmod +x $FILE_NAME
 
+  sudo sysctl -w net.core.somaxconn=65535
   sudo sysctl -w fs.file-max=6000000
   sudo sysctl -w fs.nr_open=6000000
   ulimit -n 6000000

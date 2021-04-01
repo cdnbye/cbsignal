@@ -32,6 +32,6 @@ func (b *Service) Leave(request rpcservice.JoinLeaveReq, reply *rpcservice.RpcRe
 }
 
 func (h *Service) Pong(request rpcservice.Ping, reply *rpcservice.Pong) error {
-	//log.Warnf("receive ping from ",)
+	//time.Sleep(1 * time.Second)
 	return nil
 }

@@ -22,7 +22,7 @@ import (
 	"github.com/spf13/viper"
 	"net"
 	"net/http"
-	_ "net/http/pprof"
+	//_ "net/http/pprof"
 	"net/rpc"
 	"os"
 	"os/signal"
@@ -152,7 +152,7 @@ func init()  {
 			log.Warnf("start check client alive...")
 			count := 0
 			for item := range hub.GetInstance().Clients.IterBuffered() {
-				cli := item.Val.(*client.Client)
+				cli := item.Val
 				if cli.LocalNode && cli.IsExpired(now, EXPIRE_LIMIT) {
 					// 节点过期
 					//log.Warnf("client %s is expired for %d, close it", cli.PeerId, now-cli.Timestamp)
@@ -279,6 +279,7 @@ func main() {
 
 	<-intrChan
 
+	broadcastClient.GetNodeHub().Clear()
 	log.Info("Shutting down server...")
 }
 

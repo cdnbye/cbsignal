@@ -1,7 +1,6 @@
 package heartbeat
 
 import (
-	"cbsignal/client"
 	"cbsignal/hub"
 	"cbsignal/rpcservice"
 	"github.com/lexkong/log"
@@ -11,9 +10,8 @@ import (
 
 const (
 	CHECK_INTERVAL = 25
-	EXPIRE_TOMEOUT = 21
+	EXPIRE_TOMEOUT = 15
 )
-
 
 type PongResp struct {
 	Nodes []string
@@ -52,6 +50,7 @@ func RegisterHeartbeatService() error {
 			}
 		}
 	}()
+	//log.Warnf("do RegisterName(HEARTBEAT_SERVICE, s)")
 	return rpc.RegisterName(HEARTBEAT_SERVICE, s)
 }
 
@@ -85,7 +84,7 @@ func (h *Service)Peers(request GetPeersReq, reply *PeersResp) error {
 	//	return true
 	//})
 	for item := range hub.GetInstance().Clients.IterBuffered() {
-		cli := item.Val.(*client.Client)
+		cli := item.Val
 		peer := Peer{
 			PeerId:      cli.PeerId,
 			RpcNodeAddr: cli.RpcNodeAddr,

@@ -6,7 +6,7 @@ import (
 )
 
 type NodeHub struct {
-	node map[string]*Node
+	nodes map[string]*Node
 	mu   sync.Mutex
 }
 
@@ -14,7 +14,7 @@ var nodeHub *NodeHub
 
 func NewNodeHub() *NodeHub {
 	n := NodeHub{
-		node: make(map[string]*Node),
+		nodes: make(map[string]*Node),
 	}
 	nodeHub = &n
 	return &n
@@ -27,31 +27,38 @@ func GetNode(addr string) (*Node, bool) {
 func (n *NodeHub) Delete(addr string) {
 	log.Warnf("NodeHub delete %s", addr)
 	n.mu.Lock()
-	delete(n.node, addr)
+	if node, ok := n.nodes[addr]; ok {
+		node.Released = true
+		node.connPool.Shutdown()
+	}
+	delete(n.nodes, addr)
 	n.mu.Unlock()
 }
 
 func (n *NodeHub) Add(addr string, peer *Node) {
 	log.Infof("NodeHub add %s", addr)
-	n.node[addr] = peer
+	n.nodes[addr] = peer
 }
 
 func (n *NodeHub) Get(addr string) (*Node, bool) {
 	n.mu.Lock()
-	node, ok := n.node[addr]
+	node, ok := n.nodes[addr]
 	n.mu.Unlock()
 	return node, ok
 }
 
 func (n *NodeHub) GetAll() map[string]*Node {
 	//log.Infof("NodeHub GetAll %d", len(n.node))
-	return n.node
+	return n.nodes
 }
 
 func (n *NodeHub) Clear() {
 	log.Infof("NodeHub clear")
 	n.mu.Lock()
-	n.node = make(map[string]*Node)
+	for _, node := range n.nodes {
+		node.connPool.Shutdown()
+	}
+	n.nodes = make(map[string]*Node)
 	n.mu.Unlock()
 }
 
