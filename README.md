@@ -44,9 +44,9 @@ Status: 200
   "data": {
       "version"
       "current_connections"
-      "capacity"
-      "utilization_rate"
-      "compression_enabled"
+      "cluster_mode"
+      "num_goroutine"
+      "num_per_map"
   }
 }
 ```
@@ -103,9 +103,9 @@ Status: 200
   "data": {
       "version"
       "current_connections"
-      "capacity"
-      "utilization_rate"
-      "compression_enabled"
+      "cluster_mode"
+      "num_goroutine"
+      "num_per_map"
   }
 }
 ```
