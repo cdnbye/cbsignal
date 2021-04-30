@@ -13,7 +13,6 @@ or directly use compiled linux file [cbsignal](https://github.com/cdnbye/cbsigna
 Upload binary file, admin.sh and config.yaml to server, create `cert` directory with `signaler.pem` and `signaler.key`, then start service:
 ```bash
 chmod +x admin.sh
-chmod +x cbsignal
 sudo ./admin.sh start
 ```
 
@@ -71,7 +70,6 @@ make
 将编译生成的二进制文件、admin.sh和config.yaml上传至服务器，并在同级目录创建`cert`文件夹，将证书和秘钥文件分别改名为`signaler.pem`和`signaler.key`放入cert，之后启动服务：
 ```bash
 chmod +x admin.sh
-chmod +x cbsignal
 echo -17 > /proc/$(pidof cbsignal)/oom_adj     # 防止进程被OOM killer杀死
 sudo ./admin.sh start
 ```
