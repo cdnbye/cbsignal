@@ -17,7 +17,7 @@ tls:
 
 ratelimit:
   enable: true
-  max_rate: 200                # max requests per second
+  max_rate: 100                # max requests per second
 
 # 开启压缩后可以减少信令服务器出带宽   turned on to reduce output bandwidth of the signaling server
 compression:

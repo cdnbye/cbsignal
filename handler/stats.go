@@ -38,13 +38,14 @@ func StatsHandler(info SignalInfo) http.HandlerFunc {
 			Ret:  0,
 			Data: &info,
 		}
-		b, err := json.Marshal(resp)
+		b, err := json.MarshalIndent(resp, "", "   ")
 		if err != nil {
 			resp, _ := json.Marshal(Resp{
 				Ret:  -1,
 				Data: nil,
 			})
 			w.Write(resp)
+			return
 		}
 		w.Write(b)
 	}

@@ -1,4 +1,3 @@
-### The signal server of [hlsjs-p2p-engine](https://github.com/cdnbye/hlsjs-p2p-engine), [ios-p2p-engine](https://github.com/cdnbye/ios-p2p-engine) and [android-p2p-engine](https://github.com/cdnbye/android-p2p-engine)
 
 ### build
 Make sure that the golang development environment is installed

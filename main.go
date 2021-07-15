@@ -314,6 +314,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	c := client.NewPeerClient(id, conn, true, selfAddr)
 
+	// test
+	//closeInvalidConn(c)
+	//return
+
 	// 校验
 	if securityEnabled {
 		now := time.Now().Unix()
@@ -403,6 +407,14 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 func closeInvalidConn(cli *client.Client)  {
 	cli.SendMsgClose("invalid client")
 	cli.Close()
+	//var body = ws.NewCloseFrameBody(1000, "invalid client")
+	//var frame = ws.NewCloseFrame(body)
+	//if err := ws.WriteHeader(cli.Conn, frame.Header); err != nil {
+	//	log.Warnf(err.Error())
+	//}
+	//if _, err := cli.Conn.Write(body); err != nil {
+	//	log.Warnf(err.Error())
+	//}
 }
 
 func setupConfigFromViper()  {
