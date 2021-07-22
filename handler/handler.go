@@ -39,8 +39,6 @@ func NewHandlerMsg(signal SignalMsg, cli *client.Client) (Handler, error) {
 		return &SignalHandler{Msg: &signal, Cli: cli}, nil
 	case "ping":
 		return &HeartbeatHandler{Cli: cli}, nil
-	case "rejected":
-		return &RejectHandler{Msg: &signal, Cli: cli}, nil
 	case "reject":
 		return &RejectHandler{Msg: &signal, Cli: cli}, nil
 	default:

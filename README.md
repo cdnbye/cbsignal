@@ -55,6 +55,9 @@ RPC is used to communicate between all nodes. Specify master IP in `config_clust
 sudo ./admin.sh start cluster config_cluster.yaml
 ``` 
 
+## Related projects
+* [cbsignal_node](https://github.com/cdnbye/cbsignal_node) - High performance CDNBye signaling service written in node.js
+
 ### go语言版的 CDNBye 信令服务器，可用于Web、安卓、iOS SDK等所有CDNBye产品
 #### 编译二进制文件
 请先确保已安装golang开发环境
@@ -112,6 +115,9 @@ Status: 200
 ```bash
 sudo ./admin.sh start cluster config_cluster.yaml
 ``` 
+
+## 相关项目
+* [cbsignal_node](https://github.com/cdnbye/cbsignal_node) - 基于node.js开发的高性能CDNBye信令服务
 
 
 

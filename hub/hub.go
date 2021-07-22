@@ -12,17 +12,11 @@ type Hub struct {
 
 	Clients cmap.ConcurrentMap
 
-	CompressEnable bool
-	CompressLevel int
-	CompressRatio int
 }
 
-func Init(compressEnable bool, compressLevel int, compressRatio int) {
+func Init() {
 	h = &Hub{
 		Clients: cmap.New(),
-		CompressEnable: compressEnable,
-		CompressLevel: compressLevel,
-		CompressRatio: compressRatio,
 	}
 
 }
@@ -94,14 +88,7 @@ func SendJsonToClient(target *client.Client, value interface{}) (error, bool) {
 		}
 	}()
 
-	// 如果开启压缩  TODO
-	if h.CompressEnable {
-
-
-	} else {
-		return target.SendMessage(b)
-	}
-	return nil, false
+	return target.SendMessage(b)
 }
 
 func ClearAll()  {

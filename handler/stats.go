@@ -11,7 +11,6 @@ import (
 type SignalInfo struct {
 	Version string `json:"version"`
 	CurrentConnections int `json:"current_connections"`
-	CompressionEnabled bool `json:"compression_enabled,omitempty"`
 	RateLimit          int64  `json:"rate_limit,omitempty"`
 	SecurityEnabled    bool `json:"security_enabled,omitempty"`
 	ClusterMode        bool `json:"cluster_mode,omitempty"`

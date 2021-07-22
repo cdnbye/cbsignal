@@ -57,9 +57,6 @@ var (
 	signalKeyPath  string
 
 	versionNum int
-	compressionEnabled bool
-	compressionLevel int
-	compressionActivationRatio int
 
 	limitEnabled bool
 	limitRate    int64
@@ -144,7 +141,7 @@ func init()  {
 		setupConfigFromViper()
 	})
 
-	hub.Init(compressionEnabled, compressionLevel, compressionActivationRatio)
+	hub.Init()
 	go func() {
 		for {
 			time.Sleep(CHECK_CLIENT_INTERVAL*time.Second)
@@ -268,7 +265,6 @@ func main() {
 
 	info := handler.SignalInfo{
 		Version:            VERSION,
-		CompressionEnabled: compressionEnabled,
 		SecurityEnabled: securityEnabled,
 		ClusterMode: isCluster,
 	}
@@ -285,22 +281,21 @@ func main() {
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 
+	// 限流
+	if limitEnabled {
+		if limiter.TakeAvailable(1) == 0 {
+			log.Warnf("reach rate limit %d", limiter.Capacity())
+			return
+		} else {
+			log.Infof("rate limit remaining %d capacity %d", limiter.Available(), limiter.Capacity())
+		}
+	}
+
 	// Upgrade connection
 	//log.Printf("UpgradeHTTP")
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
 	if err != nil {
 		return
-	}
-
-	// 限流
-	if limitEnabled {
-		if limiter.TakeAvailable(1) == 0 {
-			log.Warnf("reach rate limit %d", limiter.Capacity())
-			conn.Close()
-			return
-		} else {
-			log.Infof("rate limit remaining %d capacity %d", limiter.Available(), limiter.Capacity())
-		}
 	}
 
 	r.ParseForm()
@@ -320,7 +315,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 校验
 	if securityEnabled {
-		now := time.Now().Unix()
 		token := strings.Split(r.Form.Get("token"), "-")
 		if len(token) < 2 {
 			log.Warnf("token not valid %s origin %s", r.Form.Get("token"), r.Header.Get("Origin"))
@@ -334,6 +328,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			closeInvalidConn(c)
 			return
 		} else {
+			now := time.Now().Unix()
 			if ts < now - maxTimeStampAge || ts > now + maxTimeStampAge  {
 				log.Warnf("ts expired for %d origin %s", now - ts, r.Header.Get("Origin"))
 				closeInvalidConn(c)
@@ -418,9 +413,6 @@ func closeInvalidConn(cli *client.Client)  {
 }
 
 func setupConfigFromViper()  {
-	compressionEnabled = viper.GetBool("compression.enable")
-	compressionLevel = viper.GetInt("compression.level")
-	compressionActivationRatio = viper.GetInt("compression.activationRatio")
 	limitEnabled = viper.GetBool("ratelimit.enable")
 	limitRate = viper.GetInt64("ratelimit.max_rate")
 	securityEnabled = viper.GetBool("security.enable")
